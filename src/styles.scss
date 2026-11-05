@@ -1,0 +1,80 @@
+@use '@ionic/angular/css/core.css';
+@use '@ionic/angular/css/normalize.css';
+@use '@ionic/angular/css/structure.css';
+@use '@ionic/angular/css/typography.css';
+@use '@ionic/angular/css/padding.css';
+
+/* Стиль «Спільний стіл»: значения из docs/design.md. В компонентах только эти переменные. */
+:root {
+  --ion-font-family: Manrope, system-ui, sans-serif;
+  --ion-background-color: #f5f6f8;
+  --ion-text-color: #15171c;
+  --ion-tab-bar-background: #ffffff;
+  --ion-toolbar-background: #f5f6f8;
+
+  --ion-color-primary: #2550d9;
+  --ion-color-primary-rgb: 37, 80, 217;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #1a3ba6;
+  --ion-color-primary-tint: #3b62dd;
+
+  --sp-surface: #ffffff;
+  --sp-text: #15171c;
+  --sp-text-secondary: #5a6070;
+  --sp-text-tertiary: #3e4452;
+  --sp-line: #e3e6ec;
+  --sp-divider: #eceef2;
+  --sp-accent-soft: #e8eeff;
+  --sp-owed-to-you: #1e44c0;
+  --sp-you-owe: #a3420d;
+  --sp-you-owe-soft: #ffe3cf;
+  --sp-income: #1e7a4a;
+
+  --sp-bar-0: #1b3a99;
+  --sp-bar-1: #5c82f0;
+  --sp-bar-2: #b9c9fa;
+
+  --sp-radius-card: 20px;
+  --sp-radius-tile: 14px;
+  --sp-radius-button: 12px;
+
+  --sp-space-1: 4px;
+  --sp-space-2: 8px;
+  --sp-space-3: 12px;
+  --sp-space-4: 16px;
+  --sp-space-5: 20px;
+
+  --sp-page-width: 560px;
+  --sp-shadow-fab: 0 6px 16px rgba(37, 80, 217, 0.35);
+}
+
+body {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Пары фон/буква для участников и иконок категорий; индекс хранится в color_index. */
+.tone-0 {
+  --tone-bg: #dce5ff;
+  --tone-fg: #1b3a99;
+}
+.tone-1 {
+  --tone-bg: #ffe3cf;
+  --tone-fg: #8a3a0a;
+}
+.tone-2 {
+  --tone-bg: #ddf1e3;
+  --tone-fg: #1e6b3d;
+}
+.tone-3 {
+  --tone-bg: #f0e8ff;
+  --tone-fg: #5b2bb5;
+}
+.tone-4 {
+  --tone-bg: #fff1cc;
+  --tone-fg: #7a5200;
+}
+.tone-neutral {
+  --tone-bg: #eceef2;
+  --tone-fg: #5a6070;
+}

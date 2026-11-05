@@ -1,0 +1,120 @@
+<ion-content>
+  <main class="page">
+    @if (overview.hasValue()) {
+      @let o = overview.value();
+      <a class="family" routerLink="/tabs/more/family" [attr.aria-label]="t.overview.openFamily + ': ' + o.familyName">
+        <span class="family-name">{{ o.familyName }} <ion-icon name="chevron-down" aria-hidden="true" /></span>
+        <span class="family-members">{{ o.memberNames.join(', ') }}</span>
+      </a>
+    }
+
+    <div class="month">
+      <button type="button" [attr.aria-label]="t.overview.previousMonth" (click)="shiftMonth(-1)">
+        <ion-icon name="chevron-back" aria-hidden="true" />
+      </button>
+      <span>{{ monthLabel() }}</span>
+      <button
+        type="button"
+        [attr.aria-label]="t.overview.nextMonth"
+        [disabled]="isCurrentMonth()"
+        (click)="shiftMonth(1)"
+      >
+        <ion-icon name="chevron-forward" aria-hidden="true" />
+      </button>
+    </div>
+
+    @if (overview.error()) {
+      <section class="card state">
+        <p>{{ t.overview.loadError }}</p>
+        <ion-button (click)="overview.reload()">{{ t.retry }}</ion-button>
+      </section>
+    } @else if (!overview.hasValue()) {
+      <div class="state"><ion-spinner /></div>
+    } @else {
+      @let o = overview.value();
+
+      <section class="card spent">
+        <h2 class="caption">{{ t.overview.sharedExpenses }}</h2>
+        <p class="total">
+          {{ formatAmount(o.sharedTotal, { trimZero: true }) }} <span class="currency">{{ t.currency }}</span>
+        </p>
+        @if (o.spent.length) {
+          <div class="bar" aria-hidden="true">
+            @for (s of o.spent; track s.member.id) {
+              <div [class]="'bar-' + ($index % 3)" [style.flex]="s.amount"></div>
+            }
+          </div>
+          <ul class="legend">
+            @for (s of o.spent; track s.member.id) {
+              <li>
+                <span class="dot" [class]="'bar-' + ($index % 3)"></span>
+                {{ nameOf(s.member) }} · {{ formatAmount(s.amount, { trimZero: true }) }}
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="hint">{{ t.overview.noSharedExpenses }}</p>
+        }
+      </section>
+
+      <section class="balance" [class.owe]="o.myBalance < 0" [class.none]="o.myBalance === 0">
+        <div class="balance-text">
+          @if (o.myBalance === 0) {
+            <h2 class="balance-value">{{ t.overview.settled }}</h2>
+            <p class="hint">{{ t.overview.settledHint }}</p>
+          } @else {
+            <h2 class="caption">{{ o.myBalance > 0 ? t.overview.owedToYou : t.overview.youOwe }}</h2>
+            <p class="balance-value">{{ formatMoney(o.myBalance, { plus: true, trimZero: true }) }}</p>
+            <p class="hint">
+              @for (c of o.counterparties; track c.name) {
+                @if (!$first) {
+                  ·
+                }
+                {{ c.name }} {{ formatAmount(c.amount, { trimZero: true }) }}
+              }
+            </p>
+          }
+        </div>
+        @if (o.myBalance !== 0) {
+          <a class="settle" routerLink="/tabs/settle">{{ t.overview.settleAction }}</a>
+        }
+      </section>
+
+      <div class="section-head">
+        <h2>{{ t.overview.recent }}</h2>
+        <a routerLink="/tabs/transactions">{{ t.overview.all }}</a>
+      </div>
+
+      <section class="card list">
+        @for (tx of o.recent; track tx.id) {
+          <a class="row" [routerLink]="['/tabs/transactions', tx.id]">
+            <span class="icon" [class]="tx.categories ? 'tone-' + tx.categories.color_index : 'tone-neutral'">
+              <ion-icon [name]="tx.categories?.icon ?? 'swap-horizontal-outline'" aria-hidden="true" />
+            </span>
+            <span class="row-text">
+              <span class="row-title" [class.muted]="tx.type === 'transfer'">{{ title(tx) }}</span>
+              <span class="row-sub">{{ subtitle(tx) }}</span>
+            </span>
+            @switch (tx.type) {
+              @case ('income') {
+                <span class="amount income">{{ formatMoney(tx.amount_base, { plus: true }) }}</span>
+              }
+              @case ('transfer') {
+                <span class="amount transfer">{{ formatMoney(-tx.amount_base) }}</span>
+              }
+              @default {
+                <span class="amount">{{ formatMoney(tx.amount_base) }}</span>
+              }
+            }
+          </a>
+        } @empty {
+          <p class="hint empty">{{ t.overview.noRecent }}</p>
+        }
+      </section>
+
+      @if (isDemo) {
+        <p class="hint demo">{{ t.overview.demo }}</p>
+      }
+    }
+  </main>
+</ion-content>
