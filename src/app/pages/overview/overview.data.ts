@@ -1,4 +1,5 @@
 import { settlementPlan } from '../../core/money';
+import { currentMember } from '../../core/family';
 import { supabase } from '../../core/supabase';
 
 interface MemberRow {
@@ -95,27 +96,17 @@ export function buildOverview(rows: OverviewRows): Overview {
 
 async function fetchRows(month: Date): Promise<OverviewRows> {
   const db = supabase!;
-  const { data: auth } = await db.auth.getUser();
-  // ponytail: первая по дате семья пользователя; выбор активной добавить вместе с переключателем семей.
-  const { data: me, error: meError } = await db
-    .from('family_members')
-    .select('id, family_id, families(name)')
-    .eq('user_id', auth.user!.id)
-    .is('left_at', null)
-    .order('joined_at')
-    .limit(1)
-    .single();
-  if (meError) throw meError;
+  const me = await currentMember();
 
   const nextMonth = new Date(month.getFullYear(), month.getMonth() + 1, 1);
   const [members, balances, monthShared, recent] = await Promise.all([
-    db.from('family_members').select('id, display_name, color_index, left_at').eq('family_id', me.family_id).order('joined_at'),
-    db.from('member_balances').select('member_id, balance').eq('family_id', me.family_id),
+    db.from('family_members').select('id, display_name, color_index, left_at').eq('family_id', me.familyId).order('joined_at'),
+    db.from('member_balances').select('member_id, balance').eq('family_id', me.familyId),
     // ponytail: считаем на клиенте, упрётся в лимит PostgREST 1000 строк; при таком объёме заменить на view с суммами.
     db
       .from('transactions')
       .select('paid_by_member_id, amount_base')
-      .eq('family_id', me.family_id)
+      .eq('family_id', me.familyId)
       .eq('is_shared', true)
       .eq('is_hold', false)
       .gte('occurred_at', month.toISOString())
@@ -125,7 +116,7 @@ async function fetchRows(month: Date): Promise<OverviewRows> {
       .select(
         'id, type, amount_base, comment, is_shared, is_internal_transfer, split_mode, paid_by_member_id, to_member_id, categories(name, icon, color_index), transaction_shares(count)',
       )
-      .eq('family_id', me.family_id)
+      .eq('family_id', me.familyId)
       .order('occurred_at', { ascending: false })
       .limit(3),
   ]);
@@ -133,7 +124,7 @@ async function fetchRows(month: Date): Promise<OverviewRows> {
   if (failed) throw failed;
 
   return {
-    familyName: (me.families as unknown as { name: string }).name,
+    familyName: me.familyName,
     meId: me.id,
     members: members.data!,
     balances: balances.data!,

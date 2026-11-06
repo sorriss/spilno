@@ -1,0 +1,63 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start"><ion-back-button defaultHref="/tabs/more" [text]="''" /></ion-buttons>
+    <ion-title>{{ t.family.title }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <main class="page">
+    @if (family.hasValue()) {
+      @let f = family.value();
+      <h1>{{ f.familyName }}</h1>
+
+      <section>
+        <h2>{{ t.family.members }}</h2>
+        <ul class="card members">
+          @for (m of f.members; track m.id) {
+            <li>
+              <span class="avatar tone-{{ m.colorIndex }}" aria-hidden="true">{{ m.name[0] }}</span>
+              <span class="member-name">{{ m.name }}@if (m.isMe) { <small>&nbsp;· {{ t.you }}</small> }</span>
+              <span class="role">{{ t.family.roles[m.role] }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+
+      @if (f.isOwner) {
+        <section>
+          <h2>{{ t.family.invite }}</h2>
+          <div class="card invite">
+            @if (f.invite; as invite) {
+              <span class="code" [attr.aria-label]="t.family.inviteCodeLabel">{{ invite.code }}</span>
+              <p class="hint">{{ expires(invite) }}</p>
+              <div class="invite-actions">
+                <button type="button" class="cta" (click)="copy(invite.code)">{{ t.family.copy }}</button>
+                @if (canShare) {
+                  <button type="button" class="secondary" (click)="share(invite.code, f.familyName)">
+                    {{ t.family.share }}
+                  </button>
+                }
+              </div>
+            } @else {
+              <p class="hint">{{ t.family.inviteHint }}</p>
+              <button type="button" class="cta" [disabled]="busy()" (click)="create(f.familyId)">
+                {{ t.family.createInvite }}
+              </button>
+            }
+            @if (notice()) {
+              <p class="notice" role="status">{{ notice() }}</p>
+            }
+          </div>
+        </section>
+      }
+    } @else if (family.error()) {
+      <section class="card state">
+        <p>{{ t.family.loadError }}</p>
+        <ion-button (click)="family.reload()">{{ t.retry }}</ion-button>
+      </section>
+    } @else {
+      <div class="state"><ion-spinner /></div>
+    }
+  </main>
+</ion-content>

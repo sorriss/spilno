@@ -48,8 +48,14 @@ export const routes: Routes = [
       stub('transactions/:id/split', uk.pages.editSplit, '/tabs/transactions'),
       stub('settle', uk.pages.settle),
       stub('settle/history', uk.pages.settleHistory, '/tabs/settle'),
-      stub('more', uk.pages.more),
-      stub('more/family', uk.pages.family, '/tabs/more'),
+      {
+        path: 'more',
+        loadComponent: () => import('./pages/more/more.page').then((m) => m.MorePage),
+      },
+      {
+        path: 'more/family',
+        loadComponent: () => import('./pages/family/family.page').then((m) => m.FamilyPage),
+      },
       stub('more/accounts', uk.pages.accounts, '/tabs/more'),
       stub('more/categories', uk.pages.categories, '/tabs/more'),
       stub('more/settings', uk.pages.settings, '/tabs/more'),
