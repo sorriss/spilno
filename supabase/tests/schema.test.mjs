@@ -168,6 +168,47 @@ test('личную операцию видит только автор, даже
   await as(OLENA, 'delete from transactions where id = $1', [id]);
 });
 
+const addTx = (user, { type = 'expense', amount = -1000, paidBy, to = null, mode = null, shares = [] }) =>
+  as(user, 'select add_transaction($1, $2, $3, now(), null, null, $4, $5, $6, $7) as id',
+    [fam, type, amount, paidBy, to, mode, JSON.stringify(shares)]);
+
+test('add_transaction пишет общую операцию с долями и автором-вызывающим', async () => {
+  const [{ id }] = await addTx(OLENA, {
+    paidBy: andrii, mode: 'shares',
+    shares: [{ member_id: andrii, amount: 667, weight: 2 }, { member_id: olena, amount: 333, weight: 1 }],
+  });
+  const [tx] = await as(ANDRII, 'select created_by_member_id, paid_by_member_id, is_shared, amount_base from transactions where id = $1', [id]);
+  assert.equal(tx.created_by_member_id, olena);
+  assert.equal(tx.paid_by_member_id, andrii);
+  assert.equal(tx.is_shared, true);
+  assert.equal(Number(tx.amount_base), -1000);
+  assert.equal((await as(SOFIA, 'select 1 from transaction_shares where transaction_id = $1', [id])).length, 2);
+  await as(OLENA, 'delete from transactions where id = $1', [id]);
+});
+
+test('add_transaction откатывает всё, если доли не сходятся с суммой', async () => {
+  const count = async () => (await as(ANDRII, 'select count(*)::int as n from transactions'))[0].n;
+  const before = await count();
+  await assert.rejects(addTx(ANDRII, {
+    paidBy: andrii, mode: 'equal', shares: [{ member_id: andrii, amount: 999, weight: null }],
+  }), /does not match/);
+  assert.equal(await count(), before);
+});
+
+test('add_transaction: личная операция, перевод и ограничения по ролям', async () => {
+  const [{ id: personal }] = await addTx(OLENA, { paidBy: olena });
+  assert.equal((await as(ANDRII, 'select 1 from transactions where id = $1', [personal])).length, 0);
+  await as(OLENA, 'delete from transactions where id = $1', [personal]);
+
+  const [{ id: transfer }] = await addTx(ANDRII, { type: 'transfer', paidBy: andrii, to: olena });
+  assert.equal((await as(SOFIA, 'select is_internal_transfer from transactions where id = $1', [transfer]))[0].is_internal_transfer, true);
+  await as(ANDRII, 'delete from transactions where id = $1', [transfer]);
+
+  await assert.rejects(addTx(SOFIA, { paidBy: sofia }), /row-level security/);
+  await assert.rejects(addTx(STRANGER, { paidBy: andrii }));
+  await assert.rejects(addTx(ANDRII, { paidBy: olena }));
+});
+
 test('нельзя записать личную операцию на другого участника', async () => {
   await assert.rejects(as(ANDRII, `insert into transactions (family_id, type, amount, amount_base, created_by_member_id, paid_by_member_id)
     values ($1, 'expense', -100, -100, $2, $3)`, [fam, andrii, olena]));

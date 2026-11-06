@@ -31,7 +31,11 @@ export const routes: Routes = [
   },
 
   // Вне табов: у формы новой операции нет таб-бара.
-  { ...stub('new', uk.pages.newExpense, '/tabs/overview'), canActivate: [authGuard, familyGuard] },
+  {
+    path: 'new',
+    canActivate: [authGuard, familyGuard],
+    loadComponent: () => import('./pages/new-expense/new-expense.page').then((m) => m.NewExpensePage),
+  },
 
   {
     path: 'tabs',

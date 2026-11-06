@@ -31,6 +31,11 @@ export class OverviewPage {
   );
   protected readonly isCurrentMonth = computed(() => this.month() >= startOfMonth(new Date()));
 
+  /** Страница живёт в стеке Ionic: после «Нової витрати» или в другой вкладке данные могли измениться. */
+  ionViewWillEnter(): void {
+    this.overview.reload();
+  }
+
   protected readonly overview = resource({
     params: () => this.month(),
     loader: ({ params }) => loadOverview(params),

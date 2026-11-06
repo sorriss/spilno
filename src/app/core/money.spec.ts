@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatAmount, formatMoney, settlementPlan } from './money';
+import { formatAmount, formatMoney, parseKopecks, settlementPlan, splitByWeights } from './money';
 
 describe('formatMoney', () => {
   it('форматирует по правилам интерфейса', () => {
@@ -13,6 +13,39 @@ describe('formatMoney', () => {
   it('trimZero прячет только нулевые копейки', () => {
     expect(formatAmount(128500, { trimZero: true })).toBe('1 285');
     expect(formatAmount(128501, { trimZero: true })).toBe('1 285,01');
+  });
+});
+
+describe('parseKopecks', () => {
+  it('понимает то, что вводят и что показывает formatMoney', () => {
+    expect(parseKopecks('1248,60')).toBe(124860);
+    expect(parseKopecks('1248.6')).toBe(124860);
+    expect(parseKopecks('1248,')).toBe(124800);
+    expect(parseKopecks('0,07')).toBe(7);
+    expect(parseKopecks('19,99')).toBe(1999);
+    expect(parseKopecks(formatMoney(124860))).toBe(124860);
+    expect(parseKopecks('0')).toBe(0);
+  });
+
+  it('отклоняет всё остальное', () => {
+    for (const bad of ['', 'абв', '1,234', '-5', '1,2,3', '1e5', '99999999999']) {
+      expect(parseKopecks(bad)).toBeNull();
+    }
+  });
+});
+
+describe('splitByWeights', () => {
+  it('остаток получают первые, сумма сходится', () => {
+    expect(splitByWeights(100, [1, 1, 1])).toEqual([34, 33, 33]);
+    expect(splitByWeights(1, [1, 1, 1])).toEqual([1, 0, 0]);
+    expect(splitByWeights(124860, [2, 2, 1])).toEqual([49944, 49944, 24972]);
+    expect(splitByWeights(101, [2, 1])).toEqual([68, 33]);
+  });
+
+  it('на крупных суммах и весах сумма долей равна сумме', () => {
+    const total = 999999999999;
+    const shares = splitByWeights(total, [999, 7, 1]);
+    expect(shares.reduce((a, b) => a + b, 0)).toBe(total);
   });
 });
 

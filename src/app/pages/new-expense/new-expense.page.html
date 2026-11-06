@@ -1,0 +1,169 @@
+<ion-content>
+  <main class="page">
+    <div class="top">
+      <button type="button" class="round-button" [attr.aria-label]="s.close" (click)="closePage()">
+        <ion-icon name="close" aria-hidden="true" />
+      </button>
+      <h1>{{ s.title }}</h1>
+    </div>
+
+    @if (data.hasValue()) {
+      @let d = data.value();
+      @if (d.role === 'viewer') {
+        <p class="form-error">{{ s.viewerOnly }}</p>
+      } @else {
+        <div class="segment" role="group" [attr.aria-label]="s.typeLabel">
+          @for (x of types; track x) {
+            <button type="button" [attr.aria-pressed]="type() === x" (click)="pickType(x)">{{ s.types[x] }}</button>
+          }
+        </div>
+
+        <div class="amount">
+          <label for="amount">{{ s.amount }}</label>
+          <input
+            id="amount"
+            inputmode="decimal"
+            autocomplete="off"
+            placeholder="0,00"
+            [value]="amountText()"
+            (input)="amountText.set($any($event.target).value)"
+            (blur)="tidyAmount()"
+          />
+        </div>
+
+        <div class="tiles">
+          @if (type() !== 'transfer') {
+            <label class="tile">
+              <span>{{ s.category }}</span>
+              <select [value]="categoryId()" (change)="categoryId.set($any($event.target).value)">
+                <option value="">{{ s.noCategory }}</option>
+                @for (c of categories(); track c.id) {
+                  <option [value]="c.id" [selected]="c.id === categoryId()">{{ c.name }}</option>
+                }
+              </select>
+            </label>
+          }
+          <label class="tile">
+            <span>{{ s.date }}</span>
+            <input type="date" [max]="maxDate" [value]="date()" (change)="date.set($any($event.target).value)" />
+          </label>
+          <label class="tile wide">
+            <span>{{ s.comment }}</span>
+            <input
+              maxlength="200"
+              [placeholder]="s.commentPlaceholder"
+              [value]="comment()"
+              (input)="comment.set($any($event.target).value)"
+            />
+          </label>
+        </div>
+
+        @if (type() === 'transfer') {
+          <section>
+            <h2>{{ s.toWhom }}</h2>
+            @if (recipients().length) {
+              <div class="chips">
+                @for (m of recipients(); track m.id) {
+                  <button type="button" class="chip" [attr.aria-pressed]="toMember() === m.id" (click)="toMember.set(m.id)">
+                    <span class="avatar tone-{{ m.colorIndex }}" aria-hidden="true">{{ m.name[0] }}</span>{{ m.name }}
+                  </button>
+                }
+              </div>
+            } @else {
+              <p class="hint">{{ s.noRecipients }}</p>
+            }
+          </section>
+        }
+
+        @if (type() === 'expense' && multiple()) {
+          <label class="switch">
+            <span>
+              <strong>{{ s.shared }}</strong>
+              <small>{{ s.sharedHint }}</small>
+            </span>
+            <input type="checkbox" role="switch" [checked]="shared()" (change)="setShared($any($event.target).checked)" />
+          </label>
+        }
+
+        @if (shared()) {
+          <section>
+            <h2>{{ s.whoPaid }}</h2>
+            <div class="chips">
+              @for (m of d.members; track m.id) {
+                <button
+                  type="button"
+                  class="chip"
+                  [attr.aria-pressed]="(payer() ?? d.meId) === m.id"
+                  (click)="payer.set(m.id)"
+                >
+                  <span class="avatar tone-{{ m.colorIndex }}" aria-hidden="true">{{ m.name[0] }}</span>
+                  {{ isMe(d, m.id) ? t.you : m.name }}
+                </button>
+              }
+            </div>
+          </section>
+
+          <section class="split">
+            <div class="segment" role="group" [attr.aria-label]="s.splitLabel">
+              @for (x of modes; track x) {
+                <button type="button" [attr.aria-pressed]="mode() === x" (click)="mode.set(x)">{{ s.modes[x] }}</button>
+              }
+            </div>
+            @for (m of d.members; track m.id; let i = $index) {
+              @let row = rows()[i];
+              @let share = shareOf(m.id);
+              <div class="share">
+                <label>
+                  <input type="checkbox" [checked]="row.on" (change)="edit(m.id, { on: $any($event.target).checked })" />
+                  <span class="avatar tone-{{ m.colorIndex }}" aria-hidden="true">{{ m.name[0] }}</span>
+                  <span class="share-name">{{ isMe(d, m.id) ? t.you : m.name }}</span>
+                </label>
+                @if (row.on && mode() === 'shares') {
+                  <input
+                    class="small-input"
+                    inputmode="numeric"
+                    [attr.aria-label]="s.weightOf(m.name)"
+                    [value]="row.weight"
+                    (input)="edit(m.id, { weight: $any($event.target).value })"
+                  />
+                }
+                @if (row.on && mode() === 'amounts') {
+                  <input
+                    class="small-input money"
+                    inputmode="decimal"
+                    placeholder="0,00"
+                    [attr.aria-label]="s.amountOf(m.name)"
+                    [value]="row.amount"
+                    (input)="edit(m.id, { amount: $any($event.target).value })"
+                  />
+                } @else {
+                  <span class="share-amount">{{ row.on && share !== null ? money(share) : '—' }}</span>
+                }
+              </div>
+            }
+            @if (status()) {
+              <p class="status" [class.bad]="statusBad()">{{ status() }}</p>
+            }
+          </section>
+        }
+
+      }
+    } @else if (data.error()) {
+      <section class="state">
+        <p>{{ s.loadError }}</p>
+        <ion-button (click)="data.reload()">{{ t.retry }}</ion-button>
+      </section>
+    } @else {
+      <div class="state"><ion-spinner /></div>
+    }
+  </main>
+</ion-content>
+
+@if (data.hasValue() && data.value().role !== 'viewer') {
+  <ion-footer>
+    @if (error()) {
+      <p class="form-error" role="alert">{{ error() }}</p>
+    }
+    <button type="button" class="cta" [disabled]="busy()" (click)="save(data.value())">{{ s.save }}</button>
+  </ion-footer>
+}

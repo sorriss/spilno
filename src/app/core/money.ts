@@ -21,6 +21,24 @@ export function formatMoney(kopecks: number, { plus = false, trimZero = false } 
   return `${sign}${formatAmount(kopecks, { trimZero })}${NBSP}₴`;
 }
 
+const MAX_KOPECKS = 1e12;
+
+/** «1 248,60 ₴» → 124860. Считает строкой, без float. null: не сумма или больше 10 млрд. */
+export function parseKopecks(text: string): number | null {
+  const match = /^(\d+)(?:[.,](\d{0,2}))?$/.exec(text.replace(/[\s₴]/g, ''));
+  if (!match) return null;
+  const kopecks = Number(match[1]) * 100 + Number((match[2] ?? '').padEnd(2, '0'));
+  return kopecks <= MAX_KOPECKS ? kopecks : null;
+}
+
+/** Делит копейки по весам: остаток раздаётся по одной первым участникам, сумма долей всегда равна total. */
+export function splitByWeights(total: number, weights: readonly number[]): number[] {
+  const sum = weights.reduce((a, b) => a + b, 0);
+  const shares = weights.map((w) => Math.floor((total * w) / sum));
+  let rest = total - shares.reduce((a, b) => a + b, 0);
+  return shares.map((s) => (rest-- > 0 ? s + 1 : s));
+}
+
 export interface Payment {
   from: string;
   to: string;
