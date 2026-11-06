@@ -1,0 +1,62 @@
+<ion-content>
+  <main class="flow">
+    <button type="button" class="round-button" [attr.aria-label]="t.back" (click)="back()">
+      <ion-icon name="chevron-back" aria-hidden="true" />
+    </button>
+
+    <div class="copy">
+      <app-logo />
+      @if (codeSent()) {
+        <h1>{{ t.signIn.codeTitle }}</h1>
+        <p>{{ t.signIn.codeSubtitle(email().trim()) }}</p>
+      } @else {
+        <h1>{{ t.signIn.title }}</h1>
+        <p>{{ t.signIn.subtitle }}</p>
+      }
+    </div>
+
+    @if (codeSent()) {
+      <form #form class="form" (submit)="$event.preventDefault(); verify(form)">
+        <label for="code">{{ t.signIn.codeLabel }}</label>
+        <input
+          #codeInput
+          id="code"
+          name="code"
+          class="input input-code"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          pattern="[0-9]{6,10}"
+          maxlength="10"
+          required
+          (input)="digitsOnly(codeInput)"
+        />
+        @if (error()) {
+          <p class="form-error" role="alert">{{ error() }}</p>
+        }
+        <button type="submit" class="cta" [disabled]="busy()">{{ t.signIn.verify }}</button>
+        <button type="button" class="link-button" [disabled]="busy() || resendIn() > 0" (click)="send()">
+          {{ resendIn() > 0 ? t.signIn.resendIn(resendIn()) : t.signIn.resend }}
+        </button>
+      </form>
+    } @else {
+      <form class="form" (submit)="$event.preventDefault(); send()">
+        <label for="email">{{ t.signIn.emailLabel }}</label>
+        <input
+          #emailInput
+          id="email"
+          class="input"
+          type="email"
+          autocomplete="email"
+          required
+          [placeholder]="t.signIn.emailPlaceholder"
+          [value]="email()"
+          (input)="email.set(emailInput.value)"
+        />
+        @if (error()) {
+          <p class="form-error" role="alert">{{ error() }}</p>
+        }
+        <button type="submit" class="cta" [disabled]="busy()">{{ t.signIn.sendCode }}</button>
+      </form>
+    }
+  </main>
+</ion-content>

@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, familyGuard } from './core/guards';
+import { authGuard, familyGuard, guestGuard } from './core/guards';
 import { uk } from './i18n/uk';
 
 const placeholder = () => import('./pages/placeholder.page').then((m) => m.PlaceholderPage);
@@ -14,9 +14,21 @@ const stub = (path: string, title: string, back?: string) => ({
 export const routes: Routes = [
   { path: '', redirectTo: 'tabs/overview', pathMatch: 'full' },
 
-  stub('welcome', uk.pages.welcome),
-  stub('sign-in', uk.pages.signIn),
-  { ...stub('family-setup', uk.pages.familySetup), canActivate: [authGuard] },
+  {
+    path: 'welcome',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./pages/welcome/welcome.page').then((m) => m.WelcomePage),
+  },
+  {
+    path: 'sign-in',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./pages/sign-in/sign-in.page').then((m) => m.SignInPage),
+  },
+  {
+    path: 'family-setup',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/family-setup/family-setup.page').then((m) => m.FamilySetupPage),
+  },
 
   // Вне табов: у формы новой операции нет таб-бара.
   { ...stub('new', uk.pages.newExpense, '/tabs/overview'), canActivate: [authGuard, familyGuard] },

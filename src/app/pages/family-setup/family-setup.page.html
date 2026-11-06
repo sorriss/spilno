@@ -1,0 +1,69 @@
+<ion-content>
+  <main class="flow">
+    <div class="copy">
+      <h1>{{ t.familySetup.title }}</h1>
+      <p>{{ t.familySetup.subtitle }}</p>
+    </div>
+
+    <div class="choices">
+      <button type="button" class="choice" [attr.aria-pressed]="!joining()" (click)="pick(false)">
+        <span class="choice-icon create"><ion-icon name="add" aria-hidden="true" /></span>
+        <span class="choice-text">
+          <strong>{{ t.familySetup.create }}</strong>
+          <small>{{ t.familySetup.createHint }}</small>
+        </span>
+      </button>
+      <button type="button" class="choice" [attr.aria-pressed]="joining()" (click)="pick(true)">
+        <span class="choice-icon join tone-1"><ion-icon name="enter-outline" aria-hidden="true" /></span>
+        <span class="choice-text">
+          <strong>{{ t.familySetup.join }}</strong>
+          <small>{{ t.familySetup.joinHint }}</small>
+        </span>
+      </button>
+    </div>
+
+    <form #form class="form grow" (submit)="$event.preventDefault(); submit(form)">
+      <div class="card">
+        @if (joining()) {
+          <label for="inviteCode">{{ t.familySetup.inviteLabel }}</label>
+          <input
+            id="inviteCode"
+            name="inviteCode"
+            class="input input-code"
+            autocapitalize="characters"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="8"
+            required
+            [placeholder]="t.familySetup.invitePlaceholder"
+          />
+        } @else {
+          <label for="familyName">{{ t.familySetup.familyLabel }}</label>
+          <input
+            id="familyName"
+            name="familyName"
+            class="input"
+            maxlength="60"
+            required
+            [value]="t.familySetup.familyDefault"
+          />
+        }
+        <label for="memberName">{{ t.familySetup.nameLabel }}</label>
+        <input id="memberName" name="memberName" class="input" autocomplete="given-name" maxlength="40" required />
+        <small class="hint">{{ joining() ? t.familySetup.inviteHint : t.familySetup.currencyHint }}</small>
+      </div>
+
+      @if (error()) {
+        <p class="form-error" role="alert">{{ error() }}</p>
+      }
+
+      <div class="actions">
+        <button type="submit" class="cta" [disabled]="busy()">
+          {{ joining() ? t.familySetup.join : t.familySetup.createSubmit }}
+        </button>
+        <small class="hint center">{{ joining() ? t.familySetup.joinFootnote : t.familySetup.createFootnote }}</small>
+        <button type="button" class="link-button" [disabled]="busy()" (click)="leave()">{{ t.signOut }}</button>
+      </div>
+    </form>
+  </main>
+</ion-content>

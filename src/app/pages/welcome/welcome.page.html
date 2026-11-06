@@ -1,0 +1,85 @@
+<ion-content>
+  <main class="flow">
+    <header class="top">
+      <span class="brand"><app-logo />{{ t.appName }}</span>
+      <a class="skip" routerLink="/sign-in">{{ t.welcome.skip }}</a>
+    </header>
+
+    <div class="art" aria-hidden="true">
+      @switch (step()) {
+        @case (0) {
+          <div class="stack">
+            <div class="float-card">
+              <span class="caption">{{ t.welcome.sampleCaption }}</span>
+              <span class="big">{{ sampleShared }}</span>
+              <div class="bar"><i style="flex: 9"></i><i style="flex: 8"></i><i style="flex: 2"></i></div>
+            </div>
+            <div class="chip end">
+              <span class="avatars">
+                <span class="avatar tone-0">{{ t.welcome.sampleInitials[0] }}</span>
+                <span class="avatar tone-1">{{ t.welcome.sampleInitials[1] }}</span>
+                <span class="avatar tone-2">{{ t.welcome.sampleInitials[2] }}</span>
+              </span>
+              <strong>{{ t.welcome.sampleMembers }}</strong>
+            </div>
+          </div>
+        }
+        @case (1) {
+          <div class="stack float-card">
+            <div class="row strong">
+              <span>{{ t.welcome.sampleCategory }}</span><span>{{ formatMoney(-124860) }}</span>
+            </div>
+            <div class="segment">
+              <span class="on">{{ t.welcome.splitEqual }}</span>
+              <span>{{ t.welcome.splitShares }}</span>
+              <span>{{ t.welcome.splitAmounts }}</span>
+            </div>
+            @for (name of t.welcome.sampleNames; track name; let i = $index) {
+              <div class="row">
+                <span class="avatar tone-{{ i }}">{{ t.welcome.sampleInitials[i] }}</span>
+                <span class="grow">{{ name }}</span>
+                <span>{{ formatMoney(41620) }}</span>
+              </div>
+            }
+          </div>
+        }
+        @default {
+          <div class="stack">
+            <div class="chip start column">
+              <span class="caption">{{ t.overview.owedToYou }}</span>
+              <span class="owed">{{ sampleOwed }}</span>
+            </div>
+            <div class="float-card">
+              <div class="row">
+                <span class="avatar tone-1">{{ t.welcome.sampleInitials[1] }}</span>
+                <ion-icon name="arrow-forward" />
+                <span class="avatar tone-0">{{ t.welcome.sampleInitials[0] }}</span>
+                <span class="grow"></span>
+                <strong>{{ formatMoney(84000) }}</strong>
+              </div>
+              <span class="fake-button">{{ t.welcome.sampleReceived }}</span>
+            </div>
+          </div>
+        }
+      }
+    </div>
+
+    <div class="copy">
+      <h1>{{ t.welcome.slides[step()].title }}</h1>
+      <p>{{ t.welcome.slides[step()].body }}</p>
+    </div>
+
+    <div class="actions">
+      <div class="dots" role="img" [attr.aria-label]="t.welcome.progress(step() + 1, t.welcome.slides.length)">
+        @for (slide of t.welcome.slides; track slide.title; let i = $index) {
+          <span class="dot" [class.current]="i === step()"></span>
+        }
+      </div>
+      @if (step() < t.welcome.slides.length - 1) {
+        <button type="button" class="cta" (click)="step.set(step() + 1)">{{ t.welcome.next }}</button>
+      } @else {
+        <a class="cta" routerLink="/sign-in">{{ t.welcome.start }}</a>
+      }
+    </div>
+  </main>
+</ion-content>
