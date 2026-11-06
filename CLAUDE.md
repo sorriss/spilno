@@ -40,6 +40,7 @@
 
 ## Команды
 - `npm start` — dev-сервер, подключён к Supabase. Для демо-данных без входа поставьте `supabase: null` в `src/environments/environment.ts`.
+- `npm run start:lan` — то же, но сервер виден в локальной сети: `http://<IP компьютера>:4200`.
 - `npm run build` — прод-сборка.
 - `npm test -- --watch=false` — юнит-тесты (Vitest).
 - `npm run test:db` — миграции, RLS и инварианты денег на PGlite, без Docker.
