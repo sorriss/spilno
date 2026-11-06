@@ -85,28 +85,9 @@
         <a routerLink="/tabs/transactions">{{ t.overview.all }}</a>
       </div>
 
-      <section class="card list">
+      <section class="tx-list">
         @for (tx of o.recent; track tx.id) {
-          <a class="row" [routerLink]="['/tabs/transactions', tx.id]">
-            <span class="icon" [class]="tx.categories ? 'tone-' + tx.categories.color_index : 'tone-neutral'">
-              <ion-icon [name]="tx.categories?.icon ?? 'swap-horizontal-outline'" aria-hidden="true" />
-            </span>
-            <span class="row-text">
-              <span class="row-title" [class.muted]="tx.type === 'transfer'">{{ title(tx) }}</span>
-              <span class="row-sub">{{ subtitle(tx) }}</span>
-            </span>
-            @switch (tx.type) {
-              @case ('income') {
-                <span class="amount income">{{ formatMoney(tx.amount_base, { plus: true }) }}</span>
-              }
-              @case ('transfer') {
-                <span class="amount transfer">{{ formatMoney(-tx.amount_base) }}</span>
-              }
-              @default {
-                <span class="amount">{{ formatMoney(tx.amount_base) }}</span>
-              }
-            }
-          </a>
+          <a class="tx-link" [routerLink]="['/tabs/transactions', tx.id]"><app-tx-row [tx]="tx" /></a>
         } @empty {
           <p class="hint empty">{{ t.overview.noRecent }}</p>
         }

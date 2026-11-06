@@ -209,6 +209,19 @@ test('add_transaction: личная операция, перевод и огра
   await assert.rejects(addTx(ANDRII, { paidBy: olena }));
 });
 
+test('удалить общую операцию могут автор и владелец, доли удаляются с ней', async () => {
+  const shares = [{ member_id: andrii, amount: 500, weight: null }, { member_id: olena, amount: 500, weight: null }];
+  const [{ id }] = await addTx(ANDRII, { paidBy: andrii, mode: 'equal', shares });
+  assert.equal((await as(OLENA, 'delete from transactions where id = $1 returning id', [id])).length, 0);
+  assert.equal((await as(SOFIA, 'select 1 from transactions where id = $1', [id])).length, 1);
+
+  const [{ id: hers }] = await addTx(OLENA, { paidBy: olena, mode: 'equal', shares });
+  assert.equal((await as(ANDRII, 'delete from transactions where id = $1 returning id', [hers])).length, 1);
+  assert.equal((await as(ANDRII, 'select 1 from transaction_shares where transaction_id = $1', [hers])).length, 0);
+
+  await as(ANDRII, 'delete from transactions where id = $1', [id]);
+});
+
 test('нельзя записать личную операцию на другого участника', async () => {
   await assert.rejects(as(ANDRII, `insert into transactions (family_id, type, amount, amount_base, created_by_member_id, paid_by_member_id)
     values ($1, 'expense', -100, -100, $2, $3)`, [fam, andrii, olena]));

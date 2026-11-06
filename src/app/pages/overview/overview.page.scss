@@ -243,68 +243,6 @@ a {
   }
 }
 
-.list {
-  display: flex;
-  flex-direction: column;
-  padding: var(--sp-space-1) var(--sp-space-4);
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-space-3);
-  padding: var(--sp-space-3) 0;
-
-  & + & {
-    border-top: 1px solid var(--sp-divider);
-  }
-}
-
-.icon {
-  flex: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  background: var(--tone-bg);
-  color: var(--tone-fg);
-}
-
-.row-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.row-title {
-  font-size: 15px;
-  line-height: 20px;
-  font-weight: 700;
-
-  &.muted {
-    color: var(--sp-text-tertiary);
-  }
-}
-
-.amount {
-  flex: none;
-  font-size: 15px;
-  font-weight: 700;
-
-  &.income {
-    color: var(--sp-income);
-  }
-
-  &.transfer {
-    font-weight: 600;
-    color: var(--sp-text-secondary);
-  }
-}
-
 .empty {
   padding: var(--sp-space-4) 0;
   text-align: center;

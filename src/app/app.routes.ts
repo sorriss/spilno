@@ -47,8 +47,15 @@ export const routes: Routes = [
         path: 'overview',
         loadComponent: () => import('./pages/overview/overview.page').then((m) => m.OverviewPage),
       },
-      stub('transactions', uk.pages.transactions),
-      stub('transactions/:id', uk.pages.transactionDetails, '/tabs/transactions'),
+      {
+        path: 'transactions',
+        loadComponent: () => import('./pages/transactions/transactions.page').then((m) => m.TransactionsPage),
+      },
+      {
+        path: 'transactions/:id',
+        loadComponent: () =>
+          import('./pages/transaction-details/transaction-details.page').then((m) => m.TransactionDetailsPage),
+      },
       stub('transactions/:id/split', uk.pages.editSplit, '/tabs/transactions'),
       stub('settle', uk.pages.settle),
       stub('settle/history', uk.pages.settleHistory, '/tabs/settle'),

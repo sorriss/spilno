@@ -10,8 +10,8 @@
 | `/family-setup` | Створити / приєднатися | auth | **готов** |
 | `/new` | Нова витрата (без таб-бара) | auth, family | **готов**, без выбора счёта |
 | `/tabs/overview` | Огляд | auth, family | **готов** |
-| `/tabs/transactions` | Операції | auth, family | заглушка |
-| `/tabs/transactions/:id` | Деталі операції | auth, family | заглушка |
+| `/tabs/transactions` | Операції | auth, family | **готов**, без поиска и фильтров по категории |
+| `/tabs/transactions/:id` | Деталі операції | auth, family | **готов**: просмотр и удаление, правки пока нет |
 | `/tabs/transactions/:id/split` | Редагувати поділ | auth, family | заглушка |
 | `/tabs/settle` | Розрахунки | auth, family | заглушка |
 | `/tabs/settle/history` | Історія | auth, family | заглушка |
@@ -29,7 +29,7 @@ src/app/
   app.routes.ts     карта маршрутов
   core/             supabase-клиент, guards, деньги (без UI)
   i18n/uk.ts        все строки интерфейса
-  shell/            таб-бар
+  shell/            таб-бар, строка операции
   pages/<экран>/    страница + её *.data.ts (запросы и сборка данных экрана)
 src/styles.scss     дизайн-токены (--sp-*, --ion-*)
 supabase/migrations схема, RLS, RPC

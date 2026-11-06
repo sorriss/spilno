@@ -28,32 +28,6 @@ p {
   }
 }
 
-.segment {
-  display: flex;
-  gap: var(--sp-space-1);
-  padding: var(--sp-space-1);
-  border-radius: var(--sp-radius-button);
-  background: var(--sp-segment);
-
-  button {
-    flex: 1;
-    min-height: 44px;
-    border: 0;
-    border-radius: 9px;
-    background: transparent;
-    color: var(--sp-text-tertiary);
-    font: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  button[aria-pressed='true'] {
-    background: var(--sp-surface);
-    color: var(--sp-text);
-    font-weight: 700;
-  }
-}
-
 .amount {
   display: flex;
   flex-direction: column;

@@ -1,27 +1,9 @@
 import { settlementPlan } from '../../core/money';
 import { currentMember } from '../../core/family';
 import { supabase } from '../../core/supabase';
+import { MemberRow, Member, Tx, TX_FIELDS, TxRow, toMember, toTx } from '../../core/transactions';
 
-interface MemberRow {
-  id: string;
-  display_name: string;
-  color_index: number;
-  left_at: string | null;
-}
-
-interface RecentRow {
-  id: string;
-  type: 'expense' | 'income' | 'transfer';
-  amount_base: number;
-  comment: string | null;
-  is_shared: boolean;
-  is_internal_transfer: boolean;
-  split_mode: 'equal' | 'shares' | 'amounts' | null;
-  paid_by_member_id: string;
-  to_member_id: string | null;
-  categories: { name: string; icon: string; color_index: number } | null;
-  transaction_shares: { count: number }[];
-}
+type RecentRow = TxRow & { transaction_shares: { count: number }[] };
 
 /** Сырые данные экрана: одинаковой формы из Supabase и из демо. */
 export interface OverviewRows {
@@ -33,13 +15,6 @@ export interface OverviewRows {
   recent: RecentRow[];
 }
 
-export interface Member {
-  id: string;
-  name: string;
-  colorIndex: number;
-  isMe: boolean;
-}
-
 export interface Overview {
   familyName: string;
   /** Имена текущих участников для подзаголовка; себя показываем именем, а не «Ви». */
@@ -49,17 +24,11 @@ export interface Overview {
   myBalance: number;
   /** С кем нужно рассчитаться: при положительном балансе это должники, при отрицательном — кому должен я. */
   counterparties: { name: string; amount: number }[];
-  recent: (Omit<RecentRow, 'paid_by_member_id' | 'to_member_id' | 'transaction_shares'> & {
-    paidBy: Member;
-    to?: Member;
-    shareCount: number;
-  })[];
+  recent: Tx[];
 }
 
 function memberOf(rows: OverviewRows, id: string): Member {
-  const row = rows.members.find((m) => m.id === id);
-  if (!row) throw new Error(`Unknown member ${id}`);
-  return { id, name: row.display_name, colorIndex: row.color_index, isMe: id === rows.meId };
+  return toMember(rows.members, rows.meId, id);
 }
 
 export function buildOverview(rows: OverviewRows): Overview {
@@ -85,12 +54,9 @@ export function buildOverview(rows: OverviewRows): Overview {
     spent,
     myBalance: rows.balances.find((b) => b.member_id === rows.meId)?.balance ?? 0,
     counterparties,
-    recent: rows.recent.map(({ paid_by_member_id, to_member_id, transaction_shares, ...t }) => ({
-      ...t,
-      paidBy: memberOf(rows, paid_by_member_id),
-      to: to_member_id ? memberOf(rows, to_member_id) : undefined,
-      shareCount: transaction_shares[0]?.count ?? 0,
-    })),
+    recent: rows.recent.map(({ transaction_shares, ...row }) =>
+      toTx(row, transaction_shares[0]?.count ?? 0, rows.members, rows.meId),
+    ),
   };
 }
 
@@ -114,7 +80,7 @@ async function fetchRows(month: Date): Promise<OverviewRows> {
     db
       .from('transactions')
       .select(
-        'id, type, amount_base, comment, is_shared, is_internal_transfer, split_mode, paid_by_member_id, to_member_id, categories(name, icon, color_index), transaction_shares(count)',
+        `${TX_FIELDS}, transaction_shares(count)`,
       )
       .eq('family_id', me.familyId)
       .order('occurred_at', { ascending: false })
@@ -153,17 +119,17 @@ const DEMO_ROWS: OverviewRows = {
   ],
   recent: [
     {
-      id: '1', type: 'expense', amount_base: -124860, comment: null, is_shared: true, is_internal_transfer: false,
+      id: '1', type: 'expense', amount_base: -124860, occurred_at: '2026-11-05T12:00:00Z', comment: null, is_shared: true, is_internal_transfer: false,
       split_mode: 'equal', paid_by_member_id: 'a', to_member_id: null,
       categories: { name: 'Продукти', icon: 'cart-outline', color_index: 0 }, transaction_shares: [{ count: 3 }],
     },
     {
-      id: '2', type: 'expense', amount_base: -231000, comment: null, is_shared: true, is_internal_transfer: false,
+      id: '2', type: 'expense', amount_base: -231000, occurred_at: '2026-11-04T12:00:00Z', comment: null, is_shared: true, is_internal_transfer: false,
       split_mode: 'equal', paid_by_member_id: 'o', to_member_id: null,
       categories: { name: 'Комуналка', icon: 'home-outline', color_index: 1 }, transaction_shares: [{ count: 2 }],
     },
     {
-      id: '3', type: 'transfer', amount_base: -84000, comment: null, is_shared: false, is_internal_transfer: true,
+      id: '3', type: 'transfer', amount_base: -84000, occurred_at: '2026-11-03T12:00:00Z', comment: null, is_shared: false, is_internal_transfer: true,
       split_mode: null, paid_by_member_id: 'a', to_member_id: 'o', categories: null, transaction_shares: [],
     },
   ],

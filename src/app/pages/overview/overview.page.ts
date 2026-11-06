@@ -2,20 +2,15 @@ import { Component, computed, resource, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonButton, IonContent, IonIcon, IonSpinner } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import {
-  airplaneOutline, bedOutline, busOutline, cafeOutline, cardOutline, carOutline, cartOutline, chevronBack,
-  chevronDown, chevronForward, filmOutline, giftOutline, happyOutline, homeOutline, medkitOutline, pricetagOutline,
-  shirtOutline, swapHorizontalOutline,
-} from 'ionicons/icons';
+import { chevronBack, chevronDown, chevronForward } from 'ionicons/icons';
 import { formatAmount, formatMoney } from '../../core/money';
 import { uk } from '../../i18n/uk';
-import { Member, Overview, isDemo, loadOverview } from './overview.data';
-
-type Recent = Overview['recent'][number];
+import { nameOf, TxRow } from '../../shell/tx-row';
+import { isDemo, loadOverview } from './overview.data';
 
 @Component({
   selector: 'app-overview',
-  imports: [RouterLink, IonContent, IonIcon, IonSpinner, IonButton],
+  imports: [RouterLink, IonContent, IonIcon, IonSpinner, IonButton, TxRow],
   templateUrl: './overview.page.html',
   styleUrl: './overview.page.scss',
 })
@@ -24,6 +19,7 @@ export class OverviewPage {
   protected readonly isDemo = isDemo;
   protected readonly formatMoney = formatMoney;
   protected readonly formatAmount = formatAmount;
+  protected readonly nameOf = nameOf;
 
   protected readonly month = signal(startOfMonth(new Date()));
   protected readonly monthLabel = computed(
@@ -42,41 +38,12 @@ export class OverviewPage {
   });
 
   constructor() {
-    // Иконки категорий из create_family: новую категорию с другой иконкой регистрировать здесь же.
-    addIcons({
-      airplaneOutline, bedOutline, busOutline, cafeOutline, cardOutline, carOutline, cartOutline, chevronBack,
-      chevronDown, chevronForward, filmOutline, giftOutline, happyOutline, homeOutline, medkitOutline, pricetagOutline,
-      shirtOutline, swapHorizontalOutline,
-    });
+    addIcons({ chevronBack, chevronDown, chevronForward });
   }
 
   protected shiftMonth(delta: number): void {
     const m = this.month();
     this.month.set(new Date(m.getFullYear(), m.getMonth() + delta, 1));
-  }
-
-  protected nameOf(member: Member): string {
-    return member.isMe ? uk.you : member.name;
-  }
-
-  protected title(tx: Recent): string {
-    if (tx.type === 'transfer') {
-      return tx.to ? `${this.nameOf(tx.paidBy)} → ${this.nameOf(tx.to)}` : uk.transaction.transfer;
-    }
-    return tx.categories?.name ?? tx.comment ?? uk.transaction.expense;
-  }
-
-  protected subtitle(tx: Recent): string {
-    if (tx.is_internal_transfer) return uk.transaction.internalTransfer;
-    return `${this.nameOf(tx.paidBy)} · ${this.splitLabel(tx)}`;
-  }
-
-  private splitLabel(tx: Recent): string {
-    if (tx.type === 'income') return uk.transaction.income;
-    if (tx.type === 'transfer' || !tx.is_shared) return uk.transaction.personal;
-    if (tx.split_mode === 'shares') return uk.transaction.shares;
-    if (tx.split_mode === 'amounts') return uk.transaction.amounts;
-    return tx.shareCount === 2 ? uk.transaction.halves : uk.transaction.equal(tx.shareCount);
   }
 }
 
