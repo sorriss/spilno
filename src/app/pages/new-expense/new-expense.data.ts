@@ -11,6 +11,8 @@ export interface NewExpenseData {
   role: MemberRole;
   members: { id: string; name: string; colorIndex: number }[];
   categories: { id: string; name: string; kind: 'expense' | 'income' }[];
+  /** Только свои счета: платить с чужого нельзя. */
+  accounts: { id: string; name: string }[];
 }
 
 export interface ShareRow {
@@ -43,7 +45,7 @@ export function computeShares(total: number, mode: SplitMode, rows: readonly Sha
 export async function loadNewExpense(): Promise<NewExpenseData> {
   const db = supabase!;
   const me = await currentMember();
-  const [members, categories] = await Promise.all([
+  const [members, categories, accounts] = await Promise.all([
     db
       .from('family_members')
       .select('id, display_name, color_index')
@@ -51,8 +53,9 @@ export async function loadNewExpense(): Promise<NewExpenseData> {
       .is('left_at', null)
       .order('joined_at'),
     db.from('categories').select('id, name, kind').eq('family_id', me.familyId).is('archived_at', null),
+    db.from('accounts').select('id, name').eq('owner_member_id', me.id).is('archived_at', null).order('name'),
   ]);
-  const failed = members.error ?? categories.error;
+  const failed = members.error ?? categories.error ?? accounts.error;
   if (failed) throw failed;
   return {
     familyId: me.familyId,
@@ -60,6 +63,7 @@ export async function loadNewExpense(): Promise<NewExpenseData> {
     role: me.role,
     members: members.data!.map((m) => ({ id: m.id, name: m.display_name, colorIndex: m.color_index })),
     categories: (categories.data as NewExpenseData['categories']).sort((a, b) => a.name.localeCompare(b.name, 'uk')),
+    accounts: accounts.data!,
   };
 }
 
@@ -71,6 +75,7 @@ export async function saveTransaction(tx: {
   occurredAt: Date;
   comment: string | null;
   categoryId: string | null;
+  accountId: string | null;
   paidBy: string;
   toMember: string | null;
   mode: SplitMode | null;
@@ -83,6 +88,7 @@ export async function saveTransaction(tx: {
     tx_occurred_at: tx.occurredAt.toISOString(),
     tx_comment: tx.comment,
     category: tx.categoryId,
+    account: tx.accountId,
     paid_by: tx.paidBy,
     to_member: tx.toMember,
     mode: tx.mode,

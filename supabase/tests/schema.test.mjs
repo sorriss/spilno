@@ -236,6 +236,39 @@ test('удалить общую операцию могут автор и вла
   await as(ANDRII, 'delete from transactions where id = $1', [id]);
 });
 
+test('rename_me меняет только своё имя и не даёт повысить роль', async () => {
+  await as(OLENA, `select rename_me($1, ' Оленка ')`, [fam]);
+  const rows = await as(ANDRII, 'select id, display_name, role from family_members where family_id = $1', [fam]);
+  assert.equal(rows.find((r) => r.id === olena).display_name, 'Оленка');
+  assert.equal(rows.find((r) => r.id === olena).role, 'member');
+  assert.equal(rows.find((r) => r.id === andrii).display_name, 'Андрій');
+  await assert.rejects(as(OLENA, `select rename_me($1, '   ')`, [fam]));
+  await assert.rejects(as(STRANGER, `select rename_me($1, 'Гість')`, [fam]), /not a family member/);
+  assert.equal((await as(OLENA, `update family_members set role = 'owner' where id = $1 returning id`, [olena])).length, 0);
+  await as(OLENA, `select rename_me($1, 'Олена')`, [fam]);
+});
+
+test('add_transaction записывает счёт; счёт чужой семьи не проходит', async () => {
+  const [{ id: account }] = await as(ANDRII, `insert into accounts (family_id, owner_member_id, name) values ($1, $2, 'Картка') returning id`, [fam, andrii]);
+  const [{ id }] = await as(ANDRII, 'select add_transaction($1, $2, $3, now(), null, null, $4, null, null, $5, $6) as id',
+    [fam, 'expense', -100, andrii, '[]', account]);
+  assert.equal((await as(ANDRII, 'select account_id from transactions where id = $1', [id]))[0].account_id, account);
+  await as(ANDRII, 'delete from transactions where id = $1', [id]);
+  await as(ANDRII, 'delete from accounts where id = $1', [account]);
+
+  const [{ other }] = await as(STRANGER, `select create_family('Чужа 2', 'Гість') as other`);
+  const strangerMember = (await db.query('select id from family_members where family_id = $1', [other])).rows[0].id;
+  const [{ id: foreign }] = await as(STRANGER, `insert into accounts (family_id, owner_member_id, name) values ($1, $2, 'Чужий') returning id`, [other, strangerMember]);
+  await assert.rejects(as(ANDRII, 'select add_transaction($1, $2, $3, now(), null, null, $4, null, null, $5, $6)',
+    [fam, 'expense', -100, andrii, '[]', foreign]));
+});
+
+test('счёт нельзя создать на другого участника, а глядач не создаёт и категории', async () => {
+  await assert.rejects(as(OLENA, `insert into accounts (family_id, owner_member_id, name) values ($1, $2, 'Чужий')`, [fam, andrii]), /row-level security/);
+  await assert.rejects(as(SOFIA, `insert into categories (family_id, name) values ($1, 'Нова')`, [fam]), /row-level security/);
+  assert.equal((await as(SOFIA, `update categories set name = 'x' where family_id = $1 returning id`, [fam])).length, 0);
+});
+
 test('нельзя записать личную операцию на другого участника', async () => {
   await assert.rejects(as(ANDRII, `insert into transactions (family_id, type, amount, amount_base, created_by_member_id, paid_by_member_id)
     values ($1, 'expense', -100, -100, $2, $3)`, [fam, andrii, olena]));

@@ -4,6 +4,8 @@ import { allMembers, Member, toMember, Tx, TX_FIELDS, toTx, TxRow } from '../../
 
 export interface TxDetails {
   tx: Tx;
+  /** null: без счёта или чужой счёт, скрытый от семьи. */
+  accountName: string | null;
   shares: { member: Member; amount: number; weight: number | null }[];
   /** Совпадает с RLS: владелец или автор-участник. Сервер проверит всё равно. */
   canDelete: boolean;
@@ -11,6 +13,7 @@ export interface TxDetails {
 
 type DetailsRow = TxRow & {
   created_by_member_id: string;
+  accounts: { name: string } | null;
   shares: { member_id: string; amount: number; weight: number | null }[];
 };
 
@@ -22,16 +25,17 @@ export async function loadDetails(id: string): Promise<TxDetails | null> {
     allMembers(me.familyId),
     db
       .from('transactions')
-      .select(`${TX_FIELDS}, created_by_member_id, shares:transaction_shares(member_id, amount, weight)`)
+      .select(`${TX_FIELDS}, created_by_member_id, accounts(name), shares:transaction_shares(member_id, amount, weight)`)
       .eq('id', id)
       .maybeSingle(),
   ]);
   if (row.error) throw row.error;
   if (!row.data) return null;
 
-  const { shares, created_by_member_id, ...tx } = row.data as unknown as DetailsRow;
+  const { shares, created_by_member_id, accounts, ...tx } = row.data as unknown as DetailsRow;
   return {
     tx: toTx(tx, shares.length, members, me.id),
+    accountName: accounts?.name ?? null,
     shares: shares
       .map((s) => ({ member: toMember(members, me.id, s.member_id), amount: s.amount, weight: s.weight }))
       .sort((a, b) => b.amount - a.amount),

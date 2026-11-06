@@ -18,10 +18,35 @@
             <li>
               <span class="avatar tone-{{ m.colorIndex }}" aria-hidden="true">{{ m.name[0] }}</span>
               <span class="member-name">{{ m.name }}@if (m.isMe) { <small>&nbsp;· {{ t.you }}</small> }</span>
-              <span class="role">{{ t.family.roles[m.role] }}</span>
+              @if (f.isOwner && !m.isMe && m.role !== 'owner') {
+                <select
+                  class="role-select"
+                  [attr.aria-label]="t.family.roleOf(m.name)"
+                  [disabled]="busy()"
+                  (change)="changeRole(m.id, $any($event.target).value)"
+                >
+                  @for (r of roles; track r) {
+                    <option [value]="r" [selected]="r === m.role">{{ t.family.roles[r] }}</option>
+                  }
+                </select>
+                <button
+                  type="button"
+                  class="remove"
+                  [attr.aria-label]="t.family.removeOf(m.name)"
+                  [disabled]="busy()"
+                  (click)="remove(m)"
+                >
+                  <ion-icon name="close" aria-hidden="true" />
+                </button>
+              } @else {
+                <span class="role">{{ t.family.roles[m.role] }}</span>
+              }
             </li>
           }
         </ul>
+        @if (memberError()) {
+          <p class="form-error" role="alert">{{ memberError() }}</p>
+        }
       </section>
 
       @if (f.isOwner) {

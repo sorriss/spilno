@@ -29,6 +29,12 @@ import { deleteTransaction, loadDetails } from './transaction-details.data';
                 <dt>{{ s.date }}</dt>
                 <dd>{{ date(d.tx.occurred_at) }}</dd>
               </div>
+              @if (d.accountName) {
+                <div>
+                  <dt>{{ s.account }}</dt>
+                  <dd>{{ d.accountName }}</dd>
+                </div>
+              }
               @if (d.tx.comment) {
                 <div>
                   <dt>{{ s.comment }}</dt>

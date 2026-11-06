@@ -8,16 +8,18 @@
 | `/welcome` | Онбординг | guest | **готов** |
 | `/sign-in` | Вхід | guest | **готов** |
 | `/family-setup` | Створити / приєднатися | auth | **готов** |
-| `/new` | Нова витрата (без таб-бара) | auth, family | **готов**, без выбора счёта |
+| `/new` | Нова витрата (без таб-бара) | auth, family | **готов** |
 | `/tabs/overview` | Огляд | auth, family | **готов** |
 | `/tabs/transactions` | Операції | auth, family | **готов**, без поиска и фильтров по категории |
 | `/tabs/transactions/:id` | Деталі операції | auth, family | **готов**: просмотр и удаление, правки пока нет |
 | `/tabs/transactions/:id/split` | Редагувати поділ | auth, family | заглушка |
 | `/tabs/settle` | Розрахунки | auth, family | **готов**, без «Нагадати» |
 | `/tabs/settle/history` | Історія | auth, family | **готов** |
-| `/tabs/more` | Ще | auth, family | только «Сім’я» и «Вийти» |
-| `/tabs/more/family` | Учасники, запрошення | auth, family | **готов**, без смены ролей и удаления |
-| `/tabs/more/accounts`, `/categories`, `/settings` | Рахунки, Категорії, Налаштування | auth, family | заглушка |
+| `/tabs/more` | Ще | auth, family | **готов**, без монобанка и настроек устройства |
+| `/tabs/more/profile` | Профіль: своё имя | auth, family | **готов** |
+| `/tabs/more/family` | Учасники, ролі, запрошення | auth, family | **готов**, без передачи владения |
+| `/tabs/more/accounts`, `/categories` | Рахунки, Категорії | auth, family | **готов** |
+| `/tabs/more/settings` | Налаштування | auth, family | заглушка, ссылки на неё нет |
 
 Этап 2 (`/review`, `/analytics`, `/tabs/more/mono/*`) добавим вместе с экранами.
 

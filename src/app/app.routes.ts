@@ -73,8 +73,18 @@ export const routes: Routes = [
         path: 'more/family',
         loadComponent: () => import('./pages/family/family.page').then((m) => m.FamilyPage),
       },
-      stub('more/accounts', uk.pages.accounts, '/tabs/more'),
-      stub('more/categories', uk.pages.categories, '/tabs/more'),
+      {
+        path: 'more/profile',
+        loadComponent: () => import('./pages/profile/profile.page').then((m) => m.ProfilePage),
+      },
+      {
+        path: 'more/accounts',
+        loadComponent: () => import('./pages/accounts/accounts.page').then((m) => m.AccountsPage),
+      },
+      {
+        path: 'more/categories',
+        loadComponent: () => import('./pages/categories/categories.page').then((m) => m.CategoriesPage),
+      },
       stub('more/settings', uk.pages.settings, '/tabs/more'),
     ],
   },

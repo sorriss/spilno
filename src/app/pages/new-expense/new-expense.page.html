@@ -43,6 +43,17 @@
               </select>
             </label>
           }
+          @if (d.accounts.length && (!shared() || (payer() ?? d.meId) === d.meId)) {
+            <label class="tile">
+              <span>{{ s.account }}</span>
+              <select [value]="accountId()" (change)="accountId.set($any($event.target).value)">
+                <option value="">{{ s.noAccount }}</option>
+                @for (a of d.accounts; track a.id) {
+                  <option [value]="a.id" [selected]="a.id === accountId()">{{ a.name }}</option>
+                }
+              </select>
+            </label>
+          }
           <label class="tile">
             <span>{{ s.date }}</span>
             <input type="date" [max]="maxDate" [value]="date()" (change)="date.set($any($event.target).value)" />

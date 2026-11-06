@@ -35,6 +35,7 @@ export class NewExpensePage {
   protected readonly type = signal<TxType>('expense');
   protected readonly amountText = signal('');
   protected readonly categoryId = signal('');
+  protected readonly accountId = signal('');
   protected readonly date = signal(today());
   protected readonly comment = signal('');
   protected readonly payer = signal<string | null>(null);
@@ -143,6 +144,8 @@ export class NewExpensePage {
         occurredAt: this.date() === today() ? new Date() : new Date(y, m - 1, day, 12),
         comment: this.comment().trim() || null,
         categoryId: this.type() === 'transfer' ? null : this.categoryId() || null,
+        // Счёт только свой: если платил другой участник, наш счёт тут ни при чём.
+        accountId: shared && (this.payer() ?? d.meId) !== d.meId ? null : this.accountId() || null,
         // Личную операцию и перевод схема записывает только на самого автора.
         paidBy: shared ? (this.payer() ?? d.meId) : d.meId,
         toMember: this.type() === 'transfer' ? this.toMember() : null,
