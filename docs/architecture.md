@@ -13,8 +13,8 @@
 | `/tabs/transactions` | Операції | auth, family | **готов**, без поиска и фильтров по категории |
 | `/tabs/transactions/:id` | Деталі операції | auth, family | **готов**: просмотр и удаление, правки пока нет |
 | `/tabs/transactions/:id/split` | Редагувати поділ | auth, family | заглушка |
-| `/tabs/settle` | Розрахунки | auth, family | заглушка |
-| `/tabs/settle/history` | Історія | auth, family | заглушка |
+| `/tabs/settle` | Розрахунки | auth, family | **готов**, без «Нагадати» |
+| `/tabs/settle/history` | Історія | auth, family | **готов** |
 | `/tabs/more` | Ще | auth, family | только «Сім’я» и «Вийти» |
 | `/tabs/more/family` | Учасники, запрошення | auth, family | **готов**, без смены ролей и удаления |
 | `/tabs/more/accounts`, `/categories`, `/settings` | Рахунки, Категорії, Налаштування | auth, family | заглушка |

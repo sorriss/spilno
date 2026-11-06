@@ -1,0 +1,79 @@
+<ion-content>
+  <main class="page">
+    <h1>{{ s.title }}</h1>
+
+    @if (view.hasValue()) {
+      @let v = view.value();
+      <section class="tx-list">
+        @for (b of v.balances; track b.member.id) {
+          <div class="balance">
+            <span class="avatar tone-{{ b.member.colorIndex }}" aria-hidden="true">{{ b.member.name[0] }}</span>
+            <span class="text">
+              <span class="name">{{ name(b.member) }}</span>
+              <span class="sub">{{ balanceHint(b.member.isMe, b.balance) }}</span>
+            </span>
+            <span class="sum" [class.plus]="b.balance > 0" [class.minus]="b.balance < 0">{{ money(b.balance, true) }}</span>
+          </div>
+        }
+      </section>
+
+      @if (error()) {
+        <p class="form-error" role="alert">{{ error() }}</p>
+      }
+
+      @if (v.payments.length) {
+        <div>
+          <h2>{{ s.howToClose }}</h2>
+          <p class="sub">{{ s.howToCloseHint }}</p>
+        </div>
+        @for (p of v.payments; track p.from.id + p.to.id) {
+          <section class="payment">
+            <div class="pair">
+              <span class="avatar small tone-{{ p.from.colorIndex }}" aria-hidden="true">{{ p.from.name[0] }}</span>
+              <ion-icon name="arrow-forward" aria-hidden="true" />
+              <span class="avatar small tone-{{ p.to.colorIndex }}" aria-hidden="true">{{ p.to.name[0] }}</span>
+              <span class="pair-name">{{ label(p.from, p.to) }}</span>
+              <span class="pair-sum">{{ money(p.amount) }}</span>
+            </div>
+            @if (p.to.isMe) {
+              <div class="actions">
+                <button type="button" class="primary" [disabled]="busy()" (click)="received(v.familyId, p)">{{ s.received }}</button>
+                <button type="button" class="soft" [disabled]="busy()" (click)="forgive(v.familyId, p)">{{ s.forgive }}</button>
+              </div>
+            } @else if (p.from.isMe) {
+              <p class="sub">{{ s.payerHint }}</p>
+            }
+          </section>
+        }
+      } @else {
+        <p class="state">{{ s.allEven }}</p>
+      }
+
+      @if (v.recent.length) {
+        <div class="head">
+          <h2>{{ s.history }}</h2>
+          @if (v.hasMore) {
+            <a routerLink="/tabs/settle/history">{{ s.all }}</a>
+          }
+        </div>
+        <section class="tx-list">
+          @for (item of v.recent; track item.id) {
+            <div class="history">
+              <app-settlement-row [settlement]="item" />
+              @if (item.canUndo) {
+                <button type="button" class="undo" [disabled]="busy()" (click)="undo(item)">{{ s.undo }}</button>
+              }
+            </div>
+          }
+        </section>
+      }
+    } @else if (view.error()) {
+      <section class="state">
+        <p>{{ s.loadError }}</p>
+        <ion-button (click)="view.reload()">{{ t.retry }}</ion-button>
+      </section>
+    } @else {
+      <div class="state"><ion-spinner /></div>
+    }
+  </main>
+</ion-content>

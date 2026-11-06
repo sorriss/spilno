@@ -154,6 +154,18 @@ test('подтвердить расчёт может только получат
     [fam, olena, andrii]), /row-level security/);
 });
 
+test('расчёт отменяет только получатель, пробачення закрывает долг так же, как оплата', async () => {
+  const balance = async (member) => Number((await as(ANDRII, 'select balance from member_balances where member_id = $1', [member]))[0].balance);
+  const before = await balance(olena);
+  const [{ id }] = await as(ANDRII, `insert into settlements (family_id, from_member_id, to_member_id, amount, kind)
+    values ($1, $2, $3, 500, 'forgiven') returning id`, [fam, olena, andrii]);
+  assert.equal(await balance(olena), before + 500);
+
+  assert.equal((await as(OLENA, 'delete from settlements where id = $1 returning id', [id])).length, 0);
+  assert.equal((await as(ANDRII, 'delete from settlements where id = $1 returning id', [id])).length, 1);
+  assert.equal(await balance(olena), before);
+});
+
 test('личную операцию видит только автор, даже владелец не видит чужую', async () => {
   const [{ id }] = await as(OLENA, `insert into transactions (family_id, type, amount, amount_base, created_by_member_id, paid_by_member_id, comment)
     values ($1, 'expense', -38640, -38640, $2, $2, 'секрет') returning id`, [fam, olena]);
