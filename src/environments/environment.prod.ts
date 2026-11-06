@@ -1,6 +1,5 @@
 import type { Environment } from './environment.model';
 
-/** Прод. Пустые значения намеренно: createClient упадёт сразу, демо-режим в проде невозможен. */
 export const environment: Environment = {
-  supabase: { url: '', anonKey: '' },
+  supabase: { url: 'https://qggtvnnbhxfbjcrmldbo.supabase.co', anonKey: 'sb_publishable_AHJYcPPz-0phF3GX_1seEw_JH5RTzM1' },
 };

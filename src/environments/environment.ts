@@ -1,6 +1,6 @@
 import type { Environment } from './environment.model';
 
-/** Dev. Без проекта Supabase приложение работает на демо-данных; чтобы подключить, задайте url и anonKey. */
+/** Dev. Для демо-данных без входа поставьте supabase: null. */
 export const environment: Environment = {
-  supabase: null,
+  supabase: { url: 'https://qggtvnnbhxfbjcrmldbo.supabase.co', anonKey: 'sb_publishable_AHJYcPPz-0phF3GX_1seEw_JH5RTzM1' },
 };
