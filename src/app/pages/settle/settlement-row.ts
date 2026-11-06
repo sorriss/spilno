@@ -1,10 +1,23 @@
-import { Component, input } from '@angular/core';
-import { IonIcon } from '@ionic/angular';
+import { Component, input, output } from '@angular/core';
+import { AlertController, IonIcon } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { checkmark, heartOutline } from 'ionicons/icons';
 import { formatMoney } from '../../core/money';
 import { uk } from '../../i18n/uk';
 import { pairLabel, Settlement } from './settle.data';
+
+/** Спрашивает подтверждение отмены расчёта; действие выполняет вызывающая страница. */
+export async function askUndo(alerts: AlertController, s: Settlement, onConfirm: () => void): Promise<void> {
+  const alert = await alerts.create({
+    header: uk.settle.undoTitle,
+    message: `${pairLabel(s.from, s.to)}: ${formatMoney(s.amount)}. ${uk.settle.undoHint}`,
+    buttons: [
+      { text: uk.settle.cancel, role: 'cancel' },
+      { text: uk.settle.undo, role: 'destructive', handler: onConfirm },
+    ],
+  });
+  await alert.present();
+}
 
 /** Строка истории расчётов: на экране «Розрахунки» и в полной истории. */
 @Component({
@@ -19,6 +32,9 @@ import { pairLabel, Settlement } from './settle.data';
       <span class="sub">{{ date() }} · {{ t.kinds[settlement().kind] }}</span>
     </span>
     <span class="amount">{{ money() }}</span>
+    @if (settlement().canUndo) {
+      <button type="button" class="undo" [disabled]="busy()" (click)="undo.emit()">{{ t.undo }}</button>
+    }
   `,
   styles: `
     :host {
@@ -64,10 +80,25 @@ import { pairLabel, Settlement } from './settle.data';
       font-weight: 700;
       color: var(--sp-text-tertiary);
     }
+    .undo {
+      flex: none;
+      min-width: 44px;
+      min-height: 44px;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--ion-color-primary);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
   `,
 })
 export class SettlementRowComponent {
   readonly settlement = input.required<Settlement>();
+  readonly busy = input(false);
+  readonly undo = output();
 
   protected readonly t = uk.settle;
 

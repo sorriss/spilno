@@ -9,7 +9,7 @@ import { nameOf } from '../../shell/tx-row';
 import {
   addSettlement, loadSettle, pairLabel, parseReceived, Settlement, SettlementKind, SettleView, undoSettlement,
 } from './settle.data';
-import { SettlementRowComponent } from './settlement-row';
+import { askUndo, SettlementRowComponent } from './settlement-row';
 
 type Payment = SettleView['payments'][number];
 
@@ -92,16 +92,8 @@ export class SettlePage {
     await alert.present();
   }
 
-  protected async undo(settlement: Settlement): Promise<void> {
-    const alert = await this.alerts.create({
-      header: this.s.undoTitle,
-      message: `${pairLabel(settlement.from, settlement.to)}: ${formatMoney(settlement.amount)}. ${this.s.undoHint}`,
-      buttons: [
-        { text: this.s.cancel, role: 'cancel' },
-        { text: this.s.undo, role: 'destructive', handler: () => void this.run(() => undoSettlement(settlement.id)) },
-      ],
-    });
-    await alert.present();
+  protected undo(settlement: Settlement): Promise<void> {
+    return askUndo(this.alerts, settlement, () => void this.run(() => undoSettlement(settlement.id)));
   }
 
   private settle(familyId: string, p: Payment, amount: number, kind: SettlementKind): Promise<void> {

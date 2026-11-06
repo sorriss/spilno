@@ -171,28 +171,8 @@ h2 {
   }
 }
 
-.history {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-space-2);
-
-  & + & {
-    border-top: 1px solid var(--sp-divider);
-  }
-}
-
-.undo {
-  flex: none;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--ion-color-primary);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
+app-settlement-row + app-settlement-row {
+  border-top: 1px solid var(--sp-divider);
 }
 
 .state {

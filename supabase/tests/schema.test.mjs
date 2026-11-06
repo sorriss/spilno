@@ -157,6 +157,8 @@ test('подтвердить расчёт может только получат
 test('расчёт отменяет только получатель, пробачення закрывает долг так же, как оплата', async () => {
   const balance = async (member) => Number((await as(ANDRII, 'select balance from member_balances where member_id = $1', [member]))[0].balance);
   const before = await balance(olena);
+  await assert.rejects(as(OLENA, `insert into settlements (family_id, from_member_id, to_member_id, amount, kind)
+    values ($1, $2, $3, 500, 'forgiven')`, [fam, olena, andrii]), /row-level security/);
   const [{ id }] = await as(ANDRII, `insert into settlements (family_id, from_member_id, to_member_id, amount, kind)
     values ($1, $2, $3, 500, 'forgiven') returning id`, [fam, olena, andrii]);
   assert.equal(await balance(olena), before + 500);

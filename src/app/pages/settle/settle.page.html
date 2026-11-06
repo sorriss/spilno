@@ -58,12 +58,7 @@
         </div>
         <section class="tx-list">
           @for (item of v.recent; track item.id) {
-            <div class="history">
-              <app-settlement-row [settlement]="item" />
-              @if (item.canUndo) {
-                <button type="button" class="undo" [disabled]="busy()" (click)="undo(item)">{{ s.undo }}</button>
-              }
-            </div>
+            <app-settlement-row [settlement]="item" [busy]="busy()" (undo)="undo(item)" />
           }
         </section>
       }

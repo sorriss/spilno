@@ -1,12 +1,11 @@
-import { Component, resource } from '@angular/core';
+import { Component, inject, resource, signal } from '@angular/core';
 import {
-  IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonSpinner, IonTitle, IonToolbar,
+  AlertController, IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonSpinner, IonTitle, IonToolbar,
 } from '@ionic/angular';
 import { uk } from '../../i18n/uk';
-import { loadHistory } from './settle.data';
-import { SettlementRowComponent } from './settlement-row';
+import { loadHistory, Settlement, undoSettlement } from './settle.data';
+import { askUndo, SettlementRowComponent } from './settlement-row';
 
-/** Только просмотр: отмена ошибочного подтверждения есть на экране «Розрахунки». */
 @Component({
   selector: 'app-settle-history',
   imports: [
@@ -21,10 +20,13 @@ import { SettlementRowComponent } from './settlement-row';
     </ion-header>
     <ion-content>
       <main class="page">
+        @if (error()) {
+          <p class="form-error" role="alert">{{ error() }}</p>
+        }
         @if (history.hasValue()) {
           <section class="tx-list">
             @for (item of history.value(); track item.id) {
-              <app-settlement-row [settlement]="item" />
+              <app-settlement-row [settlement]="item" [busy]="busy()" (undo)="undo(item)" />
             } @empty {
               <p class="state">{{ s.historyEmpty }}</p>
             }
@@ -42,6 +44,9 @@ import { SettlementRowComponent } from './settlement-row';
   `,
   styles: `
     .page {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-space-3);
       max-width: var(--sp-page-width);
       margin: 0 auto;
       padding: var(--sp-space-3) var(--sp-space-5) var(--sp-space-5);
@@ -69,4 +74,26 @@ export class SettleHistoryPage {
   protected readonly t = uk;
   protected readonly s = uk.settle;
   protected readonly history = resource({ loader: loadHistory });
+  protected readonly busy = signal(false);
+  protected readonly error = signal('');
+
+  private readonly alerts = inject(AlertController);
+
+  protected undo(settlement: Settlement): Promise<void> {
+    return askUndo(this.alerts, settlement, () => void this.remove(settlement.id));
+  }
+
+  private async remove(id: string): Promise<void> {
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      await undoSettlement(id);
+      this.history.reload();
+    } catch {
+      this.error.set(this.s.saveError);
+    } finally {
+      this.busy.set(false);
+    }
+  }
 }
