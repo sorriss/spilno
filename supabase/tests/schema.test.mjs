@@ -317,6 +317,74 @@ test('монобанк: токен только в Vault, клиент види�
   await db.exec(`delete from accounts where external_id = 'acc1'`);
 });
 
+test('монобанк: импорт выписки окнами, без дублей и без воскрешения удалённых', async () => {
+  await asService('select mono_save_connection($1, $2, $3, $4)', [andrii, 'token', 'Андрій К.',
+    JSON.stringify([{ external_id: 'acc-imp', name: 'mono · Чорна 0001', currency: 'UAH' }])]);
+  const [{ id: account }] = await db.query(`select id from accounts where external_id = 'acc-imp'`).then((r) => r.rows);
+  const claim = () => asService('select * from mono_claim_requests()');
+  const unthrottle = () => db.exec(`update mono_connections set last_request_at = now() - interval '2 minutes'`);
+  const day = 24 * 3600 * 1000;
+  const items = (over = {}) => JSON.stringify([
+    { external_id: 'm1', occurred_at: new Date(Date.now() - 5 * day).toISOString(), amount: -12345, hold: true, comment: 'Сільпо', category: 'Продукти', ...over },
+    { external_id: 'm2', occurred_at: new Date(Date.now() - 4 * day).toISOString(), amount: 500000, hold: false, comment: 'Зарплата', category: null },
+    { external_id: 'm0', occurred_at: new Date(Date.now() - 4 * day).toISOString(), amount: 0, hold: false, comment: 'Перевірка', category: null },
+  ]);
+  const imp = (window_to, json = items(), next = null) =>
+    asService('select mono_import($1, $2, $3, $4)', [account, json, window_to, next]);
+
+  const [job] = await claim();
+  assert.equal(job.token, 'token');
+  assert.equal(job.external_id, 'acc-imp');
+  assert.ok(Date.now() - new Date(job.window_from).getTime() > 27 * day);
+  assert.equal((await claim()).length, 0); // минута ещё не прошла
+
+  await imp(job.window_to);
+  const rows = await as(ANDRII, `select external_id, type, amount_base, is_hold, is_shared, comment, category_id is not null as has_cat
+    from transactions where account_id = $1 order by external_id`, [account]);
+  assert.deepEqual(rows.map((r) => [r.external_id, r.type, Number(r.amount_base), r.is_hold, r.has_cat]),
+    [['m1', 'expense', -12345, true, true], ['m2', 'income', 500000, false, false]]);
+  assert.equal(rows[0].is_shared, false);
+  assert.equal((await as(OLENA, 'select 1 from transactions where account_id = $1', [account])).length, 0);
+  const [{ cursor }] = await db.query('select mono_cursor as cursor from accounts where id = $1', [account]).then((r) => r.rows);
+  assert.ok(Math.abs(Date.now() - 3 * day - new Date(cursor).getTime()) < 60000); // догнали: перечитываем 3 дня
+
+  // Повтор: холд стал окончательным, сумма уточнилась, дублей нет.
+  await imp(new Date().toISOString(), items({ hold: false, amount: -12000 }));
+  const [m1] = await as(ANDRII, `select id, is_hold, amount_base from transactions where external_id = 'm1'`);
+  assert.deepEqual([m1.is_hold, Number(m1.amount_base)], [false, -12000]);
+  assert.equal((await as(ANDRII, 'select count(*)::int as n from transactions where account_id = $1', [account]))[0].n, 2);
+
+  // Общую операцию повтор не ломает: сумма и доли остаются.
+  await as(ANDRII, `select update_transaction($1, 'expense', -12000, now(), null, null, $2, null, 'equal', $3, $4)`,
+    [m1.id, andrii, JSON.stringify([{ member_id: andrii, amount: 6000, weight: null }, { member_id: olena, amount: 6000, weight: null }]), account]);
+  await imp(new Date().toISOString(), items({ hold: false, amount: -99999 }));
+  assert.equal(Number((await as(OLENA, 'select amount_base from transactions where id = $1', [m1.id]))[0].amount_base), -12000);
+
+  // Удалённая не возвращается.
+  await as(ANDRII, `delete from transactions where external_id = 'm2'`);
+  await imp(new Date().toISOString());
+  assert.equal((await as(ANDRII, `select 1 from transactions where external_id = 'm2'`)).length, 0);
+
+  // 500 операций: окно дочитывается до времени самой старой.
+  const pageTo = new Date(Date.now() - 10 * day).toISOString();
+  await imp(new Date().toISOString(), '[]', pageTo);
+  await unthrottle();
+  const [paged] = await claim();
+  assert.equal(new Date(paged.window_to).toISOString(), pageTo);
+
+  // Глубина истории: год — счёт перечитывает с нового начала.
+  await as(ANDRII, 'select set_mono_history($1, 12)', [fam]);
+  await unthrottle();
+  const [deep] = await claim();
+  assert.ok(Date.now() - new Date(deep.window_from).getTime() > 360 * day);
+  await assert.rejects(as(ANDRII, 'select set_mono_history($1, 7)', [fam]), /unsupported/);
+  await assert.rejects(as(ANDRII, 'select mono_claim_requests()'), /permission denied/);
+  await assert.rejects(as(ANDRII, 'select mono_import($1, $2, now(), null)', [account, '[]']), /permission denied/);
+
+  await as(ANDRII, 'select disconnect_mono($1)', [fam]);
+  await db.exec(`delete from transactions where account_id = '${account}'; delete from accounts where id = '${account}'`);
+});
+
 test('rename_me меняет только своё имя и не даёт повысить роль', async () => {
   await as(OLENA, `select rename_me($1, ' Оленка ')`, [fam]);
   const rows = await as(ANDRII, 'select id, display_name, role from family_members where family_id = $1', [fam]);

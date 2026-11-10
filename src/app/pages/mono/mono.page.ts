@@ -1,9 +1,9 @@
-import { Component, inject, resource, signal } from '@angular/core';
+import { Component, DestroyRef, inject, resource, signal } from '@angular/core';
 import {
   AlertController, IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonSpinner, IonTitle, IonToolbar,
 } from '@ionic/angular';
 import { uk } from '../../i18n/uk';
-import { connectMono, disconnectMono, loadMono, monoErrorMessage } from './mono.data';
+import { connectMono, disconnectMono, HistoryMonths, loadMono, monoErrorMessage, setHistory } from './mono.data';
 
 @Component({
   selector: 'app-mono',
@@ -22,6 +22,31 @@ import { connectMono, disconnectMono, loadMono, monoErrorMessage } from './mono.
           @if (v.clientName) {
             <p class="status">{{ s.connected(v.clientName) }}</p>
             <p class="hint">{{ s.connectedHint }}</p>
+
+            <section>
+              <h2>{{ s.historyLabel }}</h2>
+              <div class="segment" role="group" [attr.aria-label]="s.historyLabel">
+                @for (m of depths; track m) {
+                  <button type="button" [attr.aria-pressed]="v.months === m" [disabled]="busy()" (click)="pickHistory(v.familyId, v.months, m)">
+                    {{ s.history[m] }}
+                  </button>
+                }
+              </div>
+              <p class="hint">{{ s.historyHint }}</p>
+            </section>
+
+            @if (v.accounts.length) {
+              <ul class="tx-list">
+                @for (a of v.accounts; track a.id) {
+                  <li>
+                    <span class="name">{{ a.name }}</span>
+                    <span class="progress" [class.done]="a.progress === 100">
+                      {{ a.progress === 100 ? s.upToDate : s.importing(a.progress) }}
+                    </span>
+                  </li>
+                }
+              </ul>
+            }
             @if (error()) {
               <p class="form-error" role="alert">{{ error() }}</p>
             }
@@ -59,6 +84,45 @@ import { connectMono, disconnectMono, loadMono, monoErrorMessage } from './mono.
     </ion-content>
   `,
   styles: `
+    h2 {
+      margin: 0 0 var(--sp-space-2);
+      font-size: 17px;
+      line-height: 24px;
+      font-weight: 800;
+    }
+    section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-space-2);
+    }
+    ul {
+      margin: 0;
+      list-style: none;
+    }
+    li {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-space-3);
+      min-height: 52px;
+    }
+    li + li {
+      border-top: 1px solid var(--sp-divider);
+    }
+    .name {
+      flex: 1;
+      min-width: 0;
+      font-size: 15px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+    .progress {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--sp-text-secondary);
+    }
+    .progress.done {
+      color: var(--sp-income);
+    }
     .status {
       margin: 0;
       font-size: 17px;
@@ -99,9 +163,33 @@ export class MonoPage {
 
   protected readonly t = uk;
   protected readonly s = uk.mono;
+  protected readonly depths: HistoryMonths[] = [1, 3, 12];
   protected readonly view = resource({ loader: loadMono });
   protected readonly busy = signal(false);
   protected readonly error = signal('');
+
+  constructor() {
+    // Импорт идёт на сервере раз в минуту: пока экран открыт, тихо обновляем прогресс.
+    const timer = setInterval(() => {
+      if (this.view.hasValue() && this.view.value().accounts.some((a) => a.progress < 100)) this.view.reload();
+    }, 20000);
+    inject(DestroyRef).onDestroy(() => clearInterval(timer));
+  }
+
+  /** Глубину можно только увеличить: уже загруженные операции не удаляются. */
+  protected async pickHistory(familyId: string, current: HistoryMonths, months: HistoryMonths): Promise<void> {
+    if (months <= current || this.busy()) return;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      await setHistory(familyId, months);
+      this.view.reload();
+    } catch {
+      this.error.set(this.s.errorGeneric);
+    } finally {
+      this.busy.set(false);
+    }
+  }
 
   protected async connect(familyId: string, form: HTMLFormElement): Promise<void> {
     if (this.busy()) return;

@@ -17,7 +17,7 @@
 | `/tabs/settle` | Розрахунки | auth, family | **готов**, без «Нагадати» |
 | `/tabs/settle/history` | Історія | auth, family | **готов** |
 | `/tabs/more` | Ще | auth, family | **готов**, без настроек устройства |
-| `/tabs/more/mono` | Монобанк: подключить токен, отключить | auth, family | **готов**, без импорта |
+| `/tabs/more/mono` | Монобанк: токен, глубина истории, прогресс импорта по картам | auth, family | **готов** |
 | `/tabs/more/profile` | Профіль: своё имя | auth, family | **готов** |
 | `/tabs/more/family` | Учасники, ролі, запрошення | auth, family | **готов**, без передачи владения |
 | `/tabs/more/accounts`, `/categories` | Рахунки, Категорії | auth, family | **готов** |
@@ -25,7 +25,7 @@
 
 Этап 2: `/analytics` добавим вместе с экраном. Отдельного `/review` нет, см. «Монобанк» в `docs/decisions.md`.
 
-Edge Functions лежат в `supabase/functions/<имя>/index.ts`, выкладываются вручную через Supabase Dashboard. `mono-connect` проверяет токен через client-info и сохраняет его в Vault.
+Edge Functions лежат в `supabase/functions/<имя>/index.ts`, выкладываются вручную через Supabase Dashboard. `mono-connect` проверяет токен через client-info и сохраняет его в Vault. `mono-sync` раз в минуту по pg_cron забирает выписку; расписание — `supabase/cron/mono-sync.sql`, выполняется один раз вручную.
 
 Переходы при запуске: нет сессии → `/welcome`; есть сессия, но нет семьи → `/family-setup`; иначе → `/tabs/overview`. Экраны внутри таба лежат вложенными маршрутами, поэтому каждый таб хранит свой стек и таб-бар остаётся виден.
 
