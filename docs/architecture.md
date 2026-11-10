@@ -17,6 +17,7 @@
 | `/tabs/settle` | Розрахунки | auth, family | **готов**, без «Нагадати» |
 | `/tabs/settle/history` | Історія | auth, family | **готов** |
 | `/tabs/more` | Ще | auth, family | **готов**, без настроек устройства |
+| `/tabs/more/rules` | Правила спільних: свои правила по категории или магазину | auth, family | **готов** |
 | `/tabs/more/mono` | Монобанк: токен, глубина истории, прогресс импорта по картам | auth, family | **готов** |
 | `/tabs/more/profile` | Профіль: своё имя | auth, family | **готов** |
 | `/tabs/more/family` | Учасники, ролі, запрошення | auth, family | **готов**, без передачи владения |

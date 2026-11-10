@@ -432,6 +432,60 @@ test('монобанк: перевод между участниками ста�
   await db.exec(`delete from transactions where account_id in ('${accA}', '${accO}'); delete from accounts where id in ('${accA}', '${accO}')`);
 });
 
+test('правила спільних делят новые операции с карты владельца правила', async () => {
+  await asService('select mono_save_connection($1, $2, $3, $4)', [andrii, 'token-r', 'Андрій',
+    JSON.stringify([{ external_id: 'acc-r', name: 'mono r', currency: 'UAH' }])]);
+  const account = (await db.query(`select id from accounts where external_id = 'acc-r'`)).rows[0].id;
+  const groceries = (await as(ANDRII, `select id from categories where family_id = $1 and name = 'Продукти'`, [fam]))[0].id;
+  const imp = (list) => asService('select mono_import($1, $2, now(), null)', [account, JSON.stringify(list)]);
+  const item = (external_id, amount, extra = {}) => ({
+    external_id, occurred_at: new Date(Date.now() - 3600000).toISOString(), amount, hold: false, comment: 'Магазин', category: null, ...extra,
+  });
+
+  // Импортированное до правил не трогаем.
+  await imp([item('r0', -1000, { category: 'Продукти' })]);
+
+  await as(ANDRII, 'insert into share_rules (family_id, member_id, category_id) values ($1, $2, $3)', [fam, andrii, groceries]);
+  await as(ANDRII, 'insert into share_rules (family_id, member_id, merchant, member_ids) values ($1, $2, $3, $4)',
+    [fam, andrii, ' сільпо ', [andrii, olena]]);
+  assert.equal((await as(OLENA, 'select 1 from share_rules')).length, 0);
+  await assert.rejects(as(SOFIA, 'insert into share_rules (family_id, member_id, merchant) values ($1, $2, $3)', [fam, sofia, 'АТБ']), /row-level security/);
+  await assert.rejects(as(OLENA, 'insert into share_rules (family_id, member_id, merchant) values ($1, $2, $3)', [fam, andrii, 'АТБ']), /row-level security/);
+
+  await imp([
+    item('r1', -1000, { category: 'Продукти' }), // категория: порівну на всю семью (3), лишняя копейка первому
+    item('r2', -1001, { comment: 'СІЛЬПО Київ', category: 'Продукти' }), // магазин точнее категории: только Андрій и Олена
+    item('r3', -500, { comment: 'Кіно' }), // не подходит
+    item('r4', 2000, { comment: 'Сільпо повернення' }), // доход не делим
+    item('r5', -700, { category: 'Продукти', hold: true }), // холд ждёт окончательной суммы
+  ]);
+  const shares = async (ext) => (await as(ANDRII, `select s.member_id, s.amount from transaction_shares s
+    join transactions t on t.id = s.transaction_id where t.external_id = $1 order by s.amount desc, s.member_id`, [ext]))
+    .map((r) => [r.member_id, Number(r.amount)]);
+  const shared = async (ext) => (await as(ANDRII, 'select is_shared from transactions where external_id = $1', [ext]))[0].is_shared;
+
+  assert.equal(await shared('r0'), false);
+  assert.deepEqual((await shares('r1')).map(([, a]) => a), [334, 333, 333]);
+  assert.deepEqual(await shares('r2'), [[andrii, 501], [olena, 500]].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])));
+  assert.equal(await shared('r3'), false);
+  assert.equal(await shared('r4'), false);
+  assert.equal(await shared('r5'), false);
+  assert.equal((await as(OLENA, `select 1 from transactions where external_id = 'r1'`)).length, 1); // общая видна семье
+
+  // Холд стал окончательным с другой суммой: делится уже она. Повтор не делит второй раз.
+  await imp([item('r5', -900, { category: 'Продукти' })]);
+  assert.deepEqual((await shares('r5')).map(([, a]) => a), [300, 300, 300]);
+  await imp([item('r5', -900, { category: 'Продукти' })]);
+  assert.equal((await shares('r5')).length, 3);
+
+  // Своё правило можно удалить, чужое нельзя.
+  assert.equal((await as(OLENA, 'delete from share_rules returning id')).length, 0);
+  assert.equal((await as(ANDRII, 'delete from share_rules returning id')).length, 2);
+
+  await as(ANDRII, 'select disconnect_mono($1)', [fam]);
+  await db.exec(`delete from transactions where account_id = '${account}'; delete from accounts where id = '${account}'`);
+});
+
 test('rename_me меняет только своё имя и не даёт повысить роль', async () => {
   await as(OLENA, `select rename_me($1, ' Оленка ')`, [fam]);
   const rows = await as(ANDRII, 'select id, display_name, role from family_members where family_id = $1', [fam]);

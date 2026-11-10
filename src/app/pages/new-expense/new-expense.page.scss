@@ -115,47 +115,6 @@ h2 {
   color: var(--sp-text-secondary);
 }
 
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-space-2);
-}
-
-.chip {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-space-2);
-  min-height: 44px;
-  padding: var(--sp-space-1) var(--sp-space-3) var(--sp-space-1) var(--sp-space-1);
-  border: 1.5px solid var(--sp-surface);
-  border-radius: 22px;
-  background: var(--sp-surface);
-  color: var(--sp-text);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-
-  &[aria-pressed='true'] {
-    border-color: var(--ion-color-primary);
-    background: var(--sp-accent-soft);
-  }
-}
-
-.avatar {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--tone-bg);
-  color: var(--tone-fg);
-  font-size: 12px;
-  font-weight: 800;
-}
-
 .split {
   padding: var(--sp-space-3) var(--sp-space-4);
   border-radius: var(--sp-radius-card);

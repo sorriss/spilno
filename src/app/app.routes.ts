@@ -97,6 +97,10 @@ export const routes: Routes = [
         path: 'more/mono',
         loadComponent: () => import('./pages/mono/mono.page').then((m) => m.MonoPage),
       },
+      {
+        path: 'more/rules',
+        loadComponent: () => import('./pages/rules/rules.page').then((m) => m.RulesPage),
+      },
       stub('more/settings', uk.pages.settings, '/tabs/more'),
     ],
   },

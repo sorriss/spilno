@@ -2,12 +2,12 @@ import { Component, inject, resource, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonButton, IonContent, IonIcon, IonSpinner, NavController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { cardOutline, chevronForward, peopleOutline, personAddOutline, pricetagsOutline, walletOutline } from 'ionicons/icons';
+import { cardOutline, chevronForward, flashOutline, peopleOutline, personAddOutline, pricetagsOutline, walletOutline } from 'ionicons/icons';
 import { uk } from '../../i18n/uk';
 import { signOut } from '../family-setup/family-setup.data';
 import { loadMore } from './more.data';
 
-/** Правила спільних и настройки устройства (Face ID, уведомления) появятся вместе с их функциями. */
+/** Настройки устройства (Face ID, уведомления) появятся вместе с их функциями. */
 @Component({
   selector: 'app-more',
   imports: [RouterLink, IonContent, IonIcon, IonSpinner, IonButton],
@@ -66,6 +66,11 @@ import { loadMore } from './more.data';
               @if (v.monoConnected) {
                 <span class="value">{{ s.monoConnected }}</span>
               }
+              <ion-icon name="chevron-forward" aria-hidden="true" />
+            </a>
+            <a class="row" routerLink="/tabs/more/rules">
+              <span class="icon tone-1"><ion-icon name="flash-outline" aria-hidden="true" /></span>
+              <span class="label">{{ s.rules }}</span>
               <ion-icon name="chevron-forward" aria-hidden="true" />
             </a>
           </nav>
@@ -242,7 +247,7 @@ export class MorePage {
   protected readonly error = signal('');
 
   constructor() {
-    addIcons({ cardOutline, chevronForward, peopleOutline, personAddOutline, pricetagsOutline, walletOutline });
+    addIcons({ cardOutline, chevronForward, flashOutline, peopleOutline, personAddOutline, pricetagsOutline, walletOutline });
   }
 
   /** Имя, участников и количество меняют вложенные экраны этого же таба. */
