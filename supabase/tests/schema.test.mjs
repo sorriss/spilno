@@ -398,13 +398,14 @@ test('монобанк: перевод между участниками ста�
   const item = (external_id, seconds, amount) => ({ external_id, occurred_at: at(seconds), amount, hold: false, comment: 'Переказ', category: null });
 
   // Андрій переводит Олені 500 ₴, её сторона приходит позже, на 20 секунд позже по времени.
-  // Тут же: та же сумма через 10 минут (не пара) и расход Андрія без встречной операции.
-  await imp(accA, [item('a1', 0, -50000), item('a2', 600, -50000), item('a3', 30, -7000)]);
-  await imp(accO, [item('o1', 20, 50000), item('o2', 1300, 7000)]);
+  // Тут же: второй расход на ту же сумму (пара берёт ближайший по времени) и сумма, чья встречная пришла через 25 часов.
+  // И перевод 30 ₴, чья встречная операция пришла через 20 часов: это всё ещё пара.
+  await imp(accA, [item('a1', 0, -50000), item('a2', 600, -50000), item('a3', 30, -7000), item('a4', 100, -3000)]);
+  await imp(accO, [item('o1', 20, 50000), item('o2', 25 * 3600, 7000), item('o3', 20 * 3600, 3000)]);
 
   const rows = await as(SOFIA, `select external_id, type, amount_base, paid_by_member_id, to_member_id, is_internal_transfer
     from transactions where account_id in ($1, $2) order by external_id`, [accA, accO]);
-  assert.deepEqual(rows.map((r) => [r.external_id, r.type, r.is_internal_transfer]), [['a1', 'transfer', true]]);
+  assert.deepEqual(rows.map((r) => [r.external_id, r.type, r.is_internal_transfer]), [['a1', 'transfer', true], ['a4', 'transfer', true]]);
   assert.equal(rows[0].paid_by_member_id, andrii);
   assert.equal(rows[0].to_member_id, olena);
   assert.equal(Number(rows[0].amount_base), -50000);
