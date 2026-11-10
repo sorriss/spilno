@@ -1,5 +1,6 @@
 import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { IonContent, IonIcon, NavController } from '@ionic/angular';
+import { RouterLink } from '@angular/router';
 import { addIcons } from 'ionicons';
 import { chevronBack } from 'ionicons/icons';
 import { uk } from '../../i18n/uk';
@@ -10,9 +11,13 @@ const RESEND_SECONDS = 45;
 
 @Component({
   selector: 'app-sign-in',
-  imports: [IonContent, IonIcon, Logo],
+  imports: [IonContent, IonIcon, Logo, RouterLink],
   templateUrl: './sign-in.page.html',
-  styles: 'app-logo { width: 52px; }',
+  styles: `
+    app-logo { width: 52px; }
+    .terms { font-size: 12px; line-height: 16px; color: var(--sp-text-secondary); text-align: center; }
+    .terms a { color: var(--ion-color-primary); }
+  `,
 })
 export class SignInPage implements OnDestroy {
   private readonly nav = inject(NavController);

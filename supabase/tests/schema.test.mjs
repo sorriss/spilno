@@ -85,7 +85,18 @@ test('приглашение одноразовое и неверный код �
   const [{ code }] = await as(ANDRII, 'select create_invite($1) as code', [fam]);
   assert.match(code, /^[A-HJ-NP-Z2-9]{8}$/);
   await as(STRANGER, `select join_family($1, 'Гість')`, [code]);
-  await assert.rejects(as(OLENA, `select join_family($1, 'Олена')`, [code]), /invalid invite code/);
+  const [{ joined }] = await as(OLENA, `select join_family($1, 'Олена') as joined`, [code]);
+  assert.equal(joined, null);
+  await db.exec(`delete from family_members where user_id = '${STRANGER}'`);
+});
+
+test('после 10 неверных кодов за час вход по коду блокируется', async () => {
+  const [{ code }] = await as(ANDRII, 'select create_invite($1) as code', [fam]);
+  for (let i = 0; i < 10; i++) await as(STRANGER, `select join_family('WRONG', 'Гість')`);
+  await assert.rejects(as(STRANGER, `select join_family($1, 'Гість')`, [code]), /too many invite attempts/);
+  await db.exec(`update private.invite_attempts set at = now() - interval '2 hours' where user_id = '${STRANGER}'`);
+  const [{ joined }] = await as(STRANGER, `select join_family($1, 'Гість') as joined`, [code]);
+  assert.equal(joined, fam);
   await db.exec(`delete from family_members where user_id = '${STRANGER}'`);
 });
 

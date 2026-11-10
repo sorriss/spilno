@@ -56,6 +56,7 @@
           <p class="form-error" role="alert">{{ error() }}</p>
         }
         <button type="submit" class="cta" [disabled]="busy()">{{ t.signIn.sendCode }}</button>
+        <small class="terms">{{ t.signIn.termsPrefix }}<a routerLink="/privacy">{{ t.signIn.termsLink }}</a></small>
       </form>
     }
   </main>

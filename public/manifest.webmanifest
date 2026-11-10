@@ -1,0 +1,25 @@
+{
+  "name": "Spilno",
+  "short_name": "Spilno",
+  "description": "Спільні витрати сім’ї: хто скільки витратив і хто кому винен.",
+  "lang": "uk",
+  "display": "standalone",
+  "scope": "./",
+  "start_url": "./",
+  "theme_color": "#F5F6F8",
+  "background_color": "#F5F6F8",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -25,6 +25,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/sign-in/sign-in.page').then((m) => m.SignInPage),
   },
   {
+    path: 'privacy',
+    loadComponent: () => import('./pages/privacy.page').then((m) => m.PrivacyPage),
+  },
+  {
     path: 'family-setup',
     canActivate: [authGuard],
     loadComponent: () => import('./pages/family-setup/family-setup.page').then((m) => m.FamilySetupPage),

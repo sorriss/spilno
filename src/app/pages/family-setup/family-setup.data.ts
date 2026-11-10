@@ -7,8 +7,9 @@ export async function createFamily(familyName: string, memberName: string): Prom
 }
 
 export async function joinFamily(inviteCode: string, memberName: string): Promise<void> {
-  const { error } = await supabase!.rpc('join_family', { invite_code: inviteCode, member_name: memberName });
+  const { data, error } = await supabase!.rpc('join_family', { invite_code: inviteCode, member_name: memberName });
   if (error) throw error;
+  if (!data) throw { code: 'P0002' }; // код не найден, использован или истёк
 }
 
 export async function signOut(): Promise<void> {
@@ -17,6 +18,9 @@ export async function signOut(): Promise<void> {
 }
 
 export function familyErrorMessage(error: unknown): string {
-  // P0002: join_family поднимает no_data_found, когда код не найден, использован или истёк.
-  return (error as { code?: string }).code === 'P0002' ? uk.familySetup.errorBadInvite : uk.familySetup.errorGeneric;
+  // 54000: join_family поднимает program_limit_exceeded после 10 неверных кодов за час.
+  const code = (error as { code?: string }).code;
+  if (code === 'P0002') return uk.familySetup.errorBadInvite;
+  if (code === '54000') return uk.familySetup.errorTooManyInvites;
+  return uk.familySetup.errorGeneric;
 }
