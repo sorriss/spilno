@@ -1,0 +1,10 @@
+// Cloudflare Worker со статическими файлами: отдаёт сборку Angular и index.html на любой неизвестный путь.
+{
+  "name": "spilno",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist/spilno/browser",
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [{ "pattern": "spilno.cc", "custom_domain": true }]
+}

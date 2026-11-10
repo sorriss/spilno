@@ -36,7 +36,7 @@
 
 ## Статус
 Есть каркас, схема БД, вход по email-коду, экран семьи с приглашениями, «Огляд», «Нова витрата», «Операції» с деталями, «Розрахунки» и «Ще». Всё это проверено на настоящей базе. Новые миграции применяем вручную в SQL Editor. Остальные экраны — заглушки, карта в `docs/architecture.md`.
-Основной MVP готов. Сейчас выкладываем PWA на spilno.cc (Cloudflare Pages, почта через Resend), статус в `docs/design.md`.
+Основной MVP готов. Сейчас выкладываем PWA на spilno.cc (Cloudflare Workers, почта через Resend), статус в `docs/design.md`.
 
 ## Команды
 - `npm start` — dev-сервер, подключён к Supabase. Для демо-данных без входа поставьте `supabase: null` в `src/environments/environment.ts`.
