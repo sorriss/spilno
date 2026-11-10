@@ -2,12 +2,12 @@ import { Component, inject, resource, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonButton, IonContent, IonIcon, IonSpinner, NavController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { chevronForward, peopleOutline, personAddOutline, pricetagsOutline, walletOutline } from 'ionicons/icons';
+import { cardOutline, chevronForward, peopleOutline, personAddOutline, pricetagsOutline, walletOutline } from 'ionicons/icons';
 import { uk } from '../../i18n/uk';
 import { signOut } from '../family-setup/family-setup.data';
 import { loadMore } from './more.data';
 
-/** Этап 2 (монобанк, правила) и настройки устройства (Face ID, уведомления) появятся вместе с их функциями. */
+/** Правила спільних и настройки устройства (Face ID, уведомления) появятся вместе с их функциями. */
 @Component({
   selector: 'app-more',
   imports: [RouterLink, IonContent, IonIcon, IonSpinner, IonButton],
@@ -58,6 +58,14 @@ import { loadMore } from './more.data';
               <span class="icon tone-4"><ion-icon name="pricetags-outline" aria-hidden="true" /></span>
               <span class="label">{{ s.categories }}</span>
               <span class="value">{{ v.categories }}</span>
+              <ion-icon name="chevron-forward" aria-hidden="true" />
+            </a>
+            <a class="row" routerLink="/tabs/more/mono">
+              <span class="icon tone-3"><ion-icon name="card-outline" aria-hidden="true" /></span>
+              <span class="label">{{ s.mono }}</span>
+              @if (v.monoConnected) {
+                <span class="value">{{ s.monoConnected }}</span>
+              }
               <ion-icon name="chevron-forward" aria-hidden="true" />
             </a>
           </nav>
@@ -234,7 +242,7 @@ export class MorePage {
   protected readonly error = signal('');
 
   constructor() {
-    addIcons({ chevronForward, peopleOutline, personAddOutline, pricetagsOutline, walletOutline });
+    addIcons({ cardOutline, chevronForward, peopleOutline, personAddOutline, pricetagsOutline, walletOutline });
   }
 
   /** Имя, участников и количество меняют вложенные экраны этого же таба. */

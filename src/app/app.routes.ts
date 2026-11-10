@@ -93,6 +93,10 @@ export const routes: Routes = [
         path: 'more/categories',
         loadComponent: () => import('./pages/categories/categories.page').then((m) => m.CategoriesPage),
       },
+      {
+        path: 'more/mono',
+        loadComponent: () => import('./pages/mono/mono.page').then((m) => m.MonoPage),
+      },
       stub('more/settings', uk.pages.settings, '/tabs/more'),
     ],
   },

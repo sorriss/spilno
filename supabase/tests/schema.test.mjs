@@ -54,8 +54,16 @@ before(async () => {
     create table auth.users (id uuid primary key);
     create function auth.uid() returns uuid language sql stable as
       $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
-    create role anon; create role authenticated;
-    grant usage on schema public, auth to anon, authenticated;
+    create role anon; create role authenticated; create role service_role;
+    grant usage on schema public, auth to anon, authenticated, service_role;
+    -- Заглушка Supabase Vault: в настоящем секреты шифруются, интерфейс тот же.
+    create schema vault;
+    create table vault.secrets (id uuid primary key default gen_random_uuid(), secret text not null);
+    create view vault.decrypted_secrets as select id, secret as decrypted_secret from vault.secrets;
+    create function vault.create_secret(new_secret text) returns uuid language sql as
+      $$ insert into vault.secrets (secret) values (new_secret) returning id $$;
+    create function vault.update_secret(secret_id uuid, new_secret text) returns void language sql as
+      $$ update vault.secrets set secret = new_secret where id = secret_id $$;
     grant execute on function auth.uid() to anon, authenticated;
     insert into auth.users values ('${ANDRII}'), ('${OLENA}'), ('${SOFIA}'), ('${STRANGER}');
   `);
@@ -274,6 +282,39 @@ test('update_transaction меняет сумму и доли, автор ост�
 
   await assert.rejects(updateTx(SOFIA, id, { amount: -1500, paidBy: olena }), /transaction not found/);
   await as(OLENA, 'delete from transactions where id = $1', [id]);
+});
+
+async function asService(sql, params = []) {
+  await db.exec('set role service_role;');
+  try {
+    return (await db.query(sql, params)).rows;
+  } finally {
+    await db.exec('reset role;');
+  }
+}
+
+test('монобанк: токен только в Vault, клиент видит лишь имя подключения', async () => {
+  const save = (member, token) => asService('select mono_save_connection($1, $2, $3, $4)', [member, token, 'Андрій К.',
+    JSON.stringify([{ external_id: 'acc1', name: 'mono · Чорна 1234', currency: 'UAH' }])]);
+  await save(andrii, 'token-1');
+  await save(andrii, 'token-2'); // повторное подключение заменяет токен и не дублирует счёт
+  assert.equal((await asService('select mono_token($1) as t', [andrii]))[0].t, 'token-2');
+  assert.equal((await db.query('select count(*)::int as n from vault.secrets')).rows[0].n, 1);
+  const accounts = await as(ANDRII, `select kind from accounts where external_id = 'acc1'`);
+  assert.deepEqual(accounts.map((a) => a.kind), ['mono']);
+
+  assert.equal((await as(ANDRII, 'select client_name from mono_connections'))[0].client_name, 'Андрій К.');
+  await assert.rejects(as(ANDRII, 'select secret_id from mono_connections'), /permission denied/);
+  await assert.rejects(as(ANDRII, 'select mono_token($1)', [andrii]), /permission denied/);
+  await assert.rejects(as(ANDRII, 'select mono_save_connection($1, $2, $3, $4)', [andrii, 'x', 'x', '[]']), /permission denied/);
+  assert.equal((await as(OLENA, 'select 1 from mono_connections')).length, 0);
+  await assert.rejects(save(sofia, 'token-3'), /member cannot connect mono/);
+
+  await as(ANDRII, 'select disconnect_mono($1)', [fam]);
+  assert.equal((await db.query('select count(*)::int as n from vault.secrets')).rows[0].n, 0);
+  assert.equal((await db.query('select count(*)::int as n from mono_connections')).rows[0].n, 0);
+  assert.equal((await as(ANDRII, `select 1 from accounts where external_id = 'acc1'`)).length, 1);
+  await db.exec(`delete from accounts where external_id = 'acc1'`);
 });
 
 test('rename_me меняет только своё имя и не даёт повысить роль', async () => {

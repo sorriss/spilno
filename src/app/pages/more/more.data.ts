@@ -9,12 +9,13 @@ export interface MoreView {
   members: { id: string; name: string; colorIndex: number }[];
   accounts: number;
   categories: number;
+  monoConnected: boolean;
 }
 
 export async function loadMore(): Promise<MoreView> {
   const db = supabase!;
   const me = await currentMember();
-  const [members, accounts, categories] = await Promise.all([
+  const [members, accounts, categories, mono] = await Promise.all([
     db
       .from('family_members')
       .select('id, display_name, color_index')
@@ -31,8 +32,9 @@ export async function loadMore(): Promise<MoreView> {
       .select('id', { count: 'exact', head: true })
       .eq('family_id', me.familyId)
       .is('archived_at', null),
+    db.from('mono_connections').select('member_id', { count: 'exact', head: true }).eq('member_id', me.id),
   ]);
-  const failed = members.error ?? accounts.error ?? categories.error;
+  const failed = members.error ?? accounts.error ?? categories.error ?? mono.error;
   if (failed) throw failed;
 
   const self = members.data!.find((m) => m.id === me.id)!;
@@ -44,5 +46,6 @@ export async function loadMore(): Promise<MoreView> {
     members: members.data!.map((m) => ({ id: m.id, name: m.display_name, colorIndex: m.color_index })),
     accounts: accounts.count ?? 0,
     categories: categories.count ?? 0,
+    monoConnected: !!mono.count,
   };
 }
