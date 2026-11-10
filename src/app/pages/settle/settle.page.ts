@@ -8,7 +8,7 @@ import { notify } from '../../core/push';
 import { uk } from '../../i18n/uk';
 import { nameOf } from '../../shell/tx-row';
 import {
-  addSettlement, loadSettle, pairLabel, parseReceived, Settlement, SettlementKind, SettleView, undoSettlement,
+  addSettlement, loadSettle, pairLabel, parseReceived, Settlement, SettlementKind, SettleView, startPayment, undoSettlement,
 } from './settle.data';
 import { askUndo, SettlementRowComponent } from './settlement-row';
 
@@ -99,6 +99,16 @@ export class SettlePage {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  /**
+   * Ссылка открывается сама (настоящий <a>: так iOS скорее откроет приложение mono). Параллельно запоминаем намерение;
+   * если не записалось, перевод всё равно пройдёт, а долг закроет получатель кнопкой «Отримав».
+   */
+  protected pay(familyId: string, p: Payment): void {
+    startPayment(familyId, p.to.id, p.amount)
+      .then(() => this.view.reload())
+      .catch(() => this.error.set(this.s.payError));
   }
 
   protected async forgive(familyId: string, p: Payment): Promise<void> {

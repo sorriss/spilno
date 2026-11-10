@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSettle, pairLabel, parseReceived, SettleRows } from './settle.data';
+import { buildSettle, normalizePayLink, pairLabel, parseReceived, payUrl, SettleRows } from './settle.data';
 
 const rows: SettleRows = {
   familyId: 'f',
@@ -58,5 +58,44 @@ describe('pairLabel', () => {
     expect(pairLabel(m('o', 'Олена'), m('a', 'Андрій', true))).toBe('Олена → вам');
     expect(pairLabel(m('a', 'Андрій', true), m('o', 'Олена'))).toBe('Ви → Олена');
     expect(pairLabel(m('o', 'Олена'), m('s', 'Софійка'))).toBe('Олена → Софійка');
+  });
+});
+
+describe('ссылка mono', () => {
+  it('сохраняется без суммы и параметров, чужие адреса не принимаются', () => {
+    expect(normalizePayLink(' https://send.monobank.ua/3KfsToToeE?a=100.00 ')).toBe('https://send.monobank.ua/3KfsToToeE');
+    expect(normalizePayLink('https://send.monobank.ua/3KfsToToeE')).toBe('https://send.monobank.ua/3KfsToToeE');
+    expect(normalizePayLink('http://send.monobank.ua/3KfsToToeE')).toBeNull();
+    expect(normalizePayLink('https://send.monobank.ua.evil.com/x')).toBeNull();
+    expect(normalizePayLink('https://send.monobank.ua/jar/abc')).toBeNull();
+  });
+
+  it('сумма в гривнах с точкой, копейки всегда двумя цифрами', () => {
+    expect(payUrl('https://send.monobank.ua/X', 124860)).toBe('https://send.monobank.ua/X?a=1248.60');
+    expect(payUrl('https://send.monobank.ua/X', 5)).toBe('https://send.monobank.ua/X?a=0.05');
+    expect(payUrl('https://send.monobank.ua/X', 100000)).toBe('https://send.monobank.ua/X?a=1000.00');
+  });
+
+  it('кнопка оплаты только у моих долгов и только при ссылке получателя', () => {
+    const rows: SettleRows = {
+      familyId: 'f',
+      meId: 'a',
+      members: [
+        { id: 'a', display_name: 'Андрій', color_index: 0, left_at: null },
+        { id: 'o', display_name: 'Олена', color_index: 1, left_at: null },
+        { id: 'y', display_name: 'Яна', color_index: 2, left_at: null },
+      ],
+      balances: [
+        { member_id: 'a', balance: -500 },
+        { member_id: 'y', balance: -300 },
+        { member_id: 'o', balance: 800 },
+      ],
+      settlements: [],
+      payLinks: { o: 'https://send.monobank.ua/O' },
+      pending: [{ to_member_id: 'o', amount: 500 }],
+    };
+    const payments = buildSettle(rows).payments.map((p) => [p.from.id, p.to.id, p.payUrl, p.pending]);
+    expect(payments).toContainEqual(['a', 'o', 'https://send.monobank.ua/O?a=5.00', true]);
+    expect(payments).toContainEqual(['y', 'o', null, false]);
   });
 });

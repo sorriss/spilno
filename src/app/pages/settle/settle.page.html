@@ -42,7 +42,14 @@
                 <button type="button" class="soft" [disabled]="busy()" (click)="remind(v.familyId, p)">{{ s.remind }}</button>
               </div>
             } @else if (p.from.isMe) {
-              <p class="sub">{{ s.payerHint }}</p>
+              @if (p.payUrl) {
+                <div class="actions">
+                  <a class="primary" target="_blank" rel="noopener" [href]="p.payUrl" (click)="pay(v.familyId, p)">{{ s.payInMono }}</a>
+                </div>
+                <p class="sub">{{ p.pending ? s.payPending : s.payHint }}</p>
+              } @else {
+                <p class="sub">{{ s.payerHint }} {{ s.noPayLink(p.to.name) }}</p>
+              }
             }
           </section>
         }

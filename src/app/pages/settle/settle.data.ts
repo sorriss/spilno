@@ -33,17 +33,41 @@ export interface SettleRows {
   members: MemberRow[];
   balances: { member_id: string; balance: number }[];
   settlements: SettlementRow[];
+  /** Ссылки mono участников для переказу: id участника → ссылка без суммы. */
+  payLinks?: Record<string, string>;
+  /** Мои ещё не подтверждённые «Переказати в mono» за последние сутки. */
+  pending?: { to_member_id: string; amount: number }[];
 }
 
 export interface SettleView {
   familyId: string;
   balances: { member: Member; balance: number }[];
-  payments: { from: Member; to: Member; amount: number }[];
+  payments: {
+    from: Member;
+    to: Member;
+    amount: number;
+    /** Ссылка mono получателя с суммой; только у моих долгов и если получатель сохранил ссылку. */
+    payUrl: string | null;
+    /** Я уже нажал «Переказати в mono», ждём перевод в выписке. */
+    pending: boolean;
+  }[];
   recent: Settlement[];
   hasMore: boolean;
 }
 
 const RECENT = 3;
+const PAY_LINK = /^https:\/\/send\.monobank\.ua\/[A-Za-z0-9]+$/;
+
+/** Ссылка из приложения mono → вид, который хранит Spilno: без суммы и прочих параметров. null — не ссылка mono. */
+export function normalizePayLink(input: string): string | null {
+  const link = input.trim().split(/[?#]/)[0];
+  return PAY_LINK.test(link) ? link : null;
+}
+
+/** «?a=1248.60»: mono берёт сумму в гривнах с точкой. Считаем строкой, без float. */
+export function payUrl(link: string, kopecks: number): string {
+  return `${link}?a=${Math.trunc(kopecks / 100)}.${String(kopecks % 100).padStart(2, '0')}`;
+}
 const FIELDS = 'id, from_member_id, to_member_id, amount, kind, created_at';
 
 function toSettlement(row: SettlementRow, members: readonly MemberRow[], meId: string): Settlement {
@@ -67,11 +91,16 @@ export function buildSettle(rows: SettleRows): SettleView {
     balances: rows.members
       .filter((m) => !m.left_at || balanceOf(m.id) !== 0)
       .map((m) => ({ member: member(m.id), balance: balanceOf(m.id) })),
-    payments: settlementPlan(rows.balances.map((b) => ({ memberId: b.member_id, balance: b.balance }))).map((p) => ({
-      from: member(p.from),
-      to: member(p.to),
-      amount: p.amount,
-    })),
+    payments: settlementPlan(rows.balances.map((b) => ({ memberId: b.member_id, balance: b.balance }))).map((p) => {
+      const link = p.from === rows.meId ? rows.payLinks?.[p.to] : undefined;
+      return {
+        from: member(p.from),
+        to: member(p.to),
+        amount: p.amount,
+        payUrl: link ? payUrl(link, p.amount) : null,
+        pending: !!rows.pending?.some((i) => p.from === rows.meId && i.to_member_id === p.to && i.amount === p.amount),
+      };
+    }),
     recent: rows.settlements.slice(0, RECENT).map((s) => toSettlement(s, rows.members, rows.meId)),
     hasMore: rows.settlements.length > RECENT,
   };
@@ -80,7 +109,7 @@ export function buildSettle(rows: SettleRows): SettleView {
 export async function loadSettle(): Promise<SettleView> {
   const db = supabase!;
   const me = await currentMember();
-  const [members, balances, settlements] = await Promise.all([
+  const [members, balances, settlements, links, pending] = await Promise.all([
     allMembers(me.familyId),
     db.from('member_balances').select('member_id, balance').eq('family_id', me.familyId),
     db
@@ -89,8 +118,16 @@ export async function loadSettle(): Promise<SettleView> {
       .eq('family_id', me.familyId)
       .order('created_at', { ascending: false })
       .limit(RECENT + 1),
+    db.from('family_members').select('id, mono_pay_link').eq('family_id', me.familyId).not('mono_pay_link', 'is', null),
+    // Сутки: дальше импорт намерение уже не подтвердит.
+    db
+      .from('payment_intents')
+      .select('to_member_id, amount')
+      .eq('from_member_id', me.id)
+      .is('settlement_id', null)
+      .gte('created_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString()),
   ]);
-  const failed = balances.error ?? settlements.error;
+  const failed = balances.error ?? settlements.error ?? links.error ?? pending.error;
   if (failed) throw failed;
   return buildSettle({
     familyId: me.familyId,
@@ -98,6 +135,8 @@ export async function loadSettle(): Promise<SettleView> {
     members,
     balances: balances.data!,
     settlements: settlements.data as SettlementRow[],
+    payLinks: Object.fromEntries(links.data!.map((m) => [m.id, m.mono_pay_link as string])),
+    pending: pending.data!,
   });
 }
 
@@ -127,6 +166,12 @@ export async function addSettlement(
   const { error } = await supabase!
     .from('settlements')
     .insert({ family_id: familyId, from_member_id: fromId, to_member_id: toId, amount, kind });
+  if (error) throw error;
+}
+
+/** Запоминает «плачу через mono»: импорт выписки найдёт перевод и закроет долг сам. */
+export async function startPayment(familyId: string, toId: string, amount: number): Promise<void> {
+  const { error } = await supabase!.rpc('start_payment', { fam: familyId, to_member: toId, pay_amount: amount });
   if (error) throw error;
 }
 

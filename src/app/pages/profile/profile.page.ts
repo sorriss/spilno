@@ -5,16 +5,22 @@ import {
 import { currentMember } from '../../core/family';
 import { supabase } from '../../core/supabase';
 import { uk } from '../../i18n/uk';
+import { normalizePayLink } from '../settle/settle.data';
 
 async function loadProfile() {
   const db = supabase!;
   const me = await currentMember();
   const [{ data: auth }, member] = await Promise.all([
     db.auth.getUser(),
-    db.from('family_members').select('display_name').eq('id', me.id).single(),
+    db.from('family_members').select('display_name, mono_pay_link').eq('id', me.id).single(),
   ]);
   if (member.error) throw member.error;
-  return { familyId: me.familyId, name: member.data.display_name as string, email: auth.user?.email ?? '' };
+  return {
+    familyId: me.familyId,
+    name: member.data.display_name as string,
+    payLink: (member.data.mono_pay_link as string | null) ?? '',
+    email: auth.user?.email ?? '',
+  };
 }
 
 @Component({
@@ -35,6 +41,19 @@ async function loadProfile() {
             <label for="name">{{ s.nameLabel }}</label>
             <input id="name" name="name" class="input" maxlength="60" required [value]="p.name" />
             <p class="hint">{{ s.nameHint }}</p>
+            <label for="payLink">{{ s.payLinkLabel }}</label>
+            <input
+              id="payLink"
+              name="payLink"
+              class="input"
+              inputmode="url"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              placeholder="https://send.monobank.ua/…"
+              [value]="p.payLink"
+            />
+            <p class="hint">{{ s.payLinkHint }}</p>
             <label for="email">{{ s.emailLabel }}</label>
             <input id="email" class="input" readonly [value]="p.email" />
             @if (error()) {
@@ -88,15 +107,26 @@ export class ProfilePage {
 
   protected async save(familyId: string, form: HTMLFormElement): Promise<void> {
     if (this.busy()) return;
-    const name = String(new FormData(form).get('name') ?? '').trim();
+    const data = new FormData(form);
+    const name = String(data.get('name') ?? '').trim();
+    const rawLink = String(data.get('payLink') ?? '').trim();
+    const payLink = rawLink ? normalizePayLink(rawLink) : '';
     if (!name) {
       this.error.set(this.s.errorEmpty);
+      return;
+    }
+    if (payLink === null) {
+      this.error.set(this.s.errorPayLink);
       return;
     }
     this.busy.set(true);
     this.error.set('');
     try {
-      const { error } = await supabase!.rpc('rename_me', { fam: familyId, member_name: name });
+      const [renamed, linked] = await Promise.all([
+        supabase!.rpc('rename_me', { fam: familyId, member_name: name }),
+        supabase!.rpc('set_pay_link', { fam: familyId, link: payLink }),
+      ]);
+      const error = renamed.error ?? linked.error;
       if (error) throw error;
       await this.nav.navigateBack('/tabs/more');
     } catch {

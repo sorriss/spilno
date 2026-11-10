@@ -1,7 +1,9 @@
 // Раз в минуту (pg_cron, supabase/cron/mono-sync.sql) забирает выписку mono: по одному запросу на токен.
 // Выкладка: Supabase Dashboard → Edge Functions → mono-sync, вставить этот файл целиком, Verify JWT выключить:
 // функцию вызывает cron без пользователя. Ответ ничего не раскрывает, частоту держит БД (mono_claim_requests).
+// Секреты VAPID_PUBLIC_KEY и VAPID_PRIVATE_KEY общие с функцией notify: ими шлём push о закрытом долге.
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import webpush from 'npm:web-push@3.6.7';
 
 interface Job {
   account_id: string;
@@ -42,6 +44,51 @@ function categoryFor(mcc: number): string | null {
 
 const seconds = (iso: string) => Math.floor(new Date(iso).getTime() / 1000);
 
+interface Closed {
+  from_member: string;
+  to_member: string;
+  amount: number;
+}
+
+/** «1 248,60 ₴», как в приложении. */
+function money(kopecks: number): string {
+  const whole = String(Math.trunc(kopecks / 100)).replace(/\B(?=(\d{3})+$)/g, ' ');
+  const rest = kopecks % 100;
+  return `${whole}${rest ? `,${String(rest).padStart(2, '0')}` : ''} ₴`;
+}
+
+/** Получателю: перевод по кнопке «Переказати в mono» найден в выписке, долг закрыт. */
+async function notifyClosed(admin: ReturnType<typeof createClient>, closed: Closed): Promise<void> {
+  const { data: members } = await admin
+    .from('family_members')
+    .select('id, user_id, display_name')
+    .in('id', [closed.from_member, closed.to_member]);
+  const payer = members?.find((m) => m.id === closed.from_member);
+  const payee = members?.find((m) => m.id === closed.to_member);
+  if (!payer || !payee) return;
+  const { data: subs } = await admin.from('push_subscriptions').select('endpoint, p256dh, auth').eq('user_id', payee.user_id);
+  if (!subs?.length) return;
+
+  webpush.setVapidDetails('mailto:hello@spilno.cc', Deno.env.get('VAPID_PUBLIC_KEY')!, Deno.env.get('VAPID_PRIVATE_KEY')!);
+  const payload = JSON.stringify({
+    notification: {
+      title: `Борг закрито: ${payer.display_name}`,
+      body: `Переказ ${money(closed.amount)} знайдено у виписці mono`,
+      icon: '/icons/icon-192.png',
+      data: { onActionClick: { default: { operation: 'navigateLastFocusedOrOpen', url: '/tabs/settle' } } },
+    },
+  });
+  await Promise.all(
+    subs.map((s) =>
+      webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload).catch(async (e) => {
+        const status = (e as { statusCode?: number }).statusCode;
+        if (status === 404 || status === 410) await admin.from('push_subscriptions').delete().eq('endpoint', s.endpoint);
+        else console.error(status, e);
+      }),
+    ),
+  );
+}
+
 Deno.serve(async () => {
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
   const { data: jobs, error } = await admin.rpc('mono_claim_requests');
@@ -64,7 +111,7 @@ Deno.serve(async () => {
       // mono отдаёт не больше 500 операций за запрос, от новых к старым: остальное окно дочитываем позже.
       const nextPageTo =
         items.length >= 500 ? new Date(Math.min(...items.map((i) => i.time)) * 1000).toISOString() : null;
-      const { error } = await admin.rpc('mono_import', {
+      const { data: closed, error } = await admin.rpc('mono_import', {
         account: job.account_id,
         items: items.map((i) => ({
           external_id: i.id,
@@ -78,6 +125,8 @@ Deno.serve(async () => {
         next_page_to: nextPageTo,
       });
       if (error) console.error(job.account_id, error);
+      // Push — не часть импорта: если не дошёл, долг всё равно закрыт.
+      await Promise.all(((closed ?? []) as Closed[]).map((c) => notifyClosed(admin, c).catch(console.error)));
     }),
   );
   return new Response('ok');

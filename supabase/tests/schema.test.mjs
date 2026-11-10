@@ -545,6 +545,60 @@ test('push-подписки видит только владелец; устро
   await as(OLENA, 'delete from push_subscriptions');
 });
 
+test('оплата через mono: намерение + выписка закрывают долг, дубль второй стороны убирается', async () => {
+  // Олена должна Андрію 500 ₴: общая трата 1000 ₴ пополам, платил Андрій.
+  const [{ id: debt }] = await as(ANDRII, `select add_transaction($1, 'expense', -100000, now(), null, null, $2, null, 'equal', $3) as id`,
+    [fam, andrii, JSON.stringify([{ member_id: andrii, amount: 50000, weight: null }, { member_id: olena, amount: 50000, weight: null }])]);
+  const balance = async (m) => Number((await as(ANDRII, 'select balance from member_balances where member_id = $1', [m]))[0].balance);
+  const olenaBefore = await balance(olena);
+
+  // Ссылка: только своя и только send.monobank.ua.
+  await as(ANDRII, `select set_pay_link($1, 'https://send.monobank.ua/3KfsToToeE')`, [fam]);
+  assert.equal((await as(OLENA, 'select mono_pay_link from family_members where id = $1', [andrii]))[0].mono_pay_link, 'https://send.monobank.ua/3KfsToToeE');
+  await assert.rejects(as(ANDRII, `select set_pay_link($1, 'https://evil.example/pay')`, [fam]), /check/);
+
+  // Намерение: платит должник и не больше долга.
+  await assert.rejects(as(ANDRII, 'select start_payment($1, $2, 100)', [fam, olena]), /nothing to pay/);
+  await assert.rejects(as(OLENA, 'select start_payment($1, $2, $3)', [fam, andrii, -olenaBefore + 1]), /nothing to pay/);
+  await as(OLENA, 'select start_payment($1, $2, 50000)', [fam, andrii]);
+  assert.equal((await as(SOFIA, 'select 1 from payment_intents')).length, 0);
+
+  // mono есть только у Андрія: его +500 ₴ закрывает долг.
+  await asService('select mono_save_connection($1, $2, $3, $4)', [andrii, 't', 'А', JSON.stringify([{ external_id: 'pay-a', name: 'a', currency: 'UAH' }])]);
+  const accA = (await db.query(`select id from accounts where external_id = 'pay-a'`)).rows[0].id;
+  const at = new Date().toISOString();
+  const item = (external_id, amount, time = at) => ({ external_id, occurred_at: time, amount, hold: false, comment: 'Переказ', category: null });
+  const closed = await asService('select * from mono_import($1, $2, now(), null)', [accA, JSON.stringify([item('pa1', 50000)])]);
+  assert.deepEqual(closed.map((r) => [r.from_member, r.to_member, Number(r.amount)]), [[olena, andrii, 50000]]);
+  assert.equal(await balance(olena), olenaBefore + 50000);
+  const [tr] = await as(SOFIA, `select type, paid_by_member_id, to_member_id, amount_base from transactions where external_id = 'pa1'`);
+  assert.deepEqual([tr.type, tr.paid_by_member_id, tr.to_member_id, Number(tr.amount_base)], ['transfer', olena, andrii, -50000]);
+
+  // Олена подключает mono позже: её −500 ₴ — вторая сторона того же перевода, дубль.
+  await asService('select mono_save_connection($1, $2, $3, $4)', [olena, 't', 'О', JSON.stringify([{ external_id: 'pay-o', name: 'o', currency: 'UAH' }])]);
+  const accO = (await db.query(`select id from accounts where external_id = 'pay-o'`)).rows[0].id;
+  await asService('select * from mono_import($1, $2, now(), null)', [accO, JSON.stringify([item('po1', -50000)])]);
+  assert.equal((await as(OLENA, `select 1 from transactions where external_id = 'po1'`)).length, 0);
+
+  // Повторный опрос не ломает перевод, а посторонний доход на ту же сумму остаётся доходом.
+  await asService('select * from mono_import($1, $2, now(), null)', [accA, JSON.stringify([item('pa1', 50000), item('pa2', 50000)])]);
+  assert.equal(Number((await as(SOFIA, `select amount_base from transactions where external_id = 'pa1'`))[0].amount_base), -50000);
+  assert.equal((await as(ANDRII, `select type from transactions where external_id = 'pa2'`))[0].type, 'income');
+  assert.equal(await balance(olena), olenaBefore + 50000); // второй раз долг не закрывается
+
+  // Намерение старше суток не срабатывает.
+  await db.query(`insert into payment_intents (family_id, from_member_id, to_member_id, amount, created_at)
+    values ($1, $2, $3, 1000, now() - interval '30 hours')`, [fam, olena, andrii]);
+  const late = await asService('select * from mono_import($1, $2, now(), null)', [accA, JSON.stringify([item('pa3', 1000)])]);
+  assert.equal(late.length, 0);
+
+  await as(ANDRII, 'select disconnect_mono($1)', [fam]);
+  await as(OLENA, 'select disconnect_mono($1)', [fam]);
+  await db.exec(`delete from payment_intents; delete from settlements where from_member_id = '${olena}' and amount = 50000;
+    delete from transactions where account_id in ('${accA}', '${accO}') or id = '${debt}';
+    delete from accounts where id in ('${accA}', '${accO}'); update family_members set mono_pay_link = null`);
+});
+
 test('rename_me меняет только своё имя и не даёт повысить роль', async () => {
   await as(OLENA, `select rename_me($1, ' Оленка ')`, [fam]);
   const rows = await as(ANDRII, 'select id, display_name, role from family_members where family_id = $1', [fam]);

@@ -130,9 +130,14 @@ h2 {
   display: flex;
   gap: var(--sp-space-2);
 
-  button {
+  button,
+  a {
+    display: flex;
     flex: 1;
+    align-items: center;
+    justify-content: center;
     min-height: 44px;
+    text-decoration: none;
     border: 0;
     border-radius: var(--sp-radius-button);
     font: inherit;
