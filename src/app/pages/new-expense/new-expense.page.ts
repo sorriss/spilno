@@ -5,6 +5,7 @@ import {
 import { addIcons } from 'ionicons';
 import { close } from 'ionicons/icons';
 import { formatMoney, parseKopecks } from '../../core/money';
+import { notify } from '../../core/push';
 import { uk } from '../../i18n/uk';
 import {
   computeShares, EditTx, loadNewExpense, NewExpenseData, saveTransaction, ShareRow, SplitMode, TxType,
@@ -175,7 +176,7 @@ export class NewExpensePage {
     const payer = shared ? (this.payer() ?? d.authorId) : d.authorId;
     this.busy.set(true);
     try {
-      await saveTransaction({
+      const id = await saveTransaction({
         id: original?.id ?? null,
         familyId: d.familyId,
         type: this.type(),
@@ -197,6 +198,8 @@ export class NewExpensePage {
         mode: shared ? this.mode() : null,
         shares: shared ? this.shares()! : [],
       });
+      // Уведомление — не часть сохранения: если не дошло, операция всё равно записана.
+      if (shared && !original) notify({ type: 'expense', familyId: d.familyId, transactionId: id }).catch(() => undefined);
       await this.closePage();
     } catch {
       this.saveError.set(this.s.errorSave);

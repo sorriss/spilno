@@ -134,7 +134,7 @@ export async function loadNewExpense(id?: string): Promise<NewExpenseData | null
   };
 }
 
-/** Без id создаёт операцию, с id переписывает существующую вместе с долями. */
+/** Без id создаёт операцию, с id переписывает существующую вместе с долями. Возвращает id операции. */
 export async function saveTransaction(tx: {
   id: string | null;
   familyId: string;
@@ -149,7 +149,7 @@ export async function saveTransaction(tx: {
   toMember: string | null;
   mode: SplitMode | null;
   shares: Share[];
-}): Promise<void> {
+}): Promise<string> {
   const params = {
     tx_type: tx.type,
     tx_amount: tx.type === 'income' ? tx.amount : -tx.amount,
@@ -165,8 +165,9 @@ export async function saveTransaction(tx: {
       .filter((s) => s.amount > 0)
       .map((s) => ({ member_id: s.memberId, amount: s.amount, weight: s.weight })),
   };
-  const { error } = tx.id
+  const { data, error } = tx.id
     ? await supabase!.rpc('update_transaction', { tx: tx.id, ...params })
     : await supabase!.rpc('add_transaction', { fam: tx.familyId, ...params });
   if (error) throw error;
+  return tx.id ?? (data as string);
 }

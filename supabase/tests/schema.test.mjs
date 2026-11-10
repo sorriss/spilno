@@ -533,6 +533,18 @@ test('аналитика: Сім’я — общие траты, Мої — ли
   for (const id of ids) await db.exec(`delete from transactions where id = '${id}'`);
 });
 
+test('push-подписки видит только владелец; устройство переходит к новому пользователю', async () => {
+  await as(ANDRII, `select claim_push_subscription('https://push/e1', 'p', 'a')`);
+  assert.equal((await as(ANDRII, 'select 1 from push_subscriptions')).length, 1);
+  assert.equal((await as(OLENA, 'select 1 from push_subscriptions')).length, 0);
+  await assert.rejects(as(OLENA, `insert into push_subscriptions (endpoint, user_id, p256dh, auth) values ('x', $1, 'p', 'a')`, [ANDRII]), /row-level security/);
+
+  await as(OLENA, `select claim_push_subscription('https://push/e1', 'p2', 'a2')`);
+  assert.equal((await as(ANDRII, 'select 1 from push_subscriptions')).length, 0);
+  assert.equal((await as(OLENA, 'select p256dh from push_subscriptions'))[0].p256dh, 'p2');
+  await as(OLENA, 'delete from push_subscriptions');
+});
+
 test('rename_me меняет только своё имя и не даёт повысить роль', async () => {
   await as(OLENA, `select rename_me($1, ' Оленка ')`, [fam]);
   const rows = await as(ANDRII, 'select id, display_name, role from family_members where family_id = $1', [fam]);

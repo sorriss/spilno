@@ -15,9 +15,9 @@
 | `/tabs/overview/analytics` | Аналітика: Сім’я / Мої, категории за месяц, 6 месяцев | auth, family | **готов** |
 | `/tabs/transactions` | Операції | auth, family | **готов**, без поиска и фильтров по категории |
 | `/tabs/transactions/:id` | Деталі операції | auth, family | **готов**: просмотр, правка и удаление |
-| `/tabs/settle` | Розрахунки | auth, family | **готов**, без «Нагадати» |
+| `/tabs/settle` | Розрахунки | auth, family | **готов** |
 | `/tabs/settle/history` | Історія | auth, family | **готов** |
-| `/tabs/more` | Ще | auth, family | **готов**, без настроек устройства |
+| `/tabs/more` | Ще | auth, family | **готов**, сповіщення в разделе «Застосунок» |
 | `/tabs/more/rules` | Правила спільних: свои правила по категории или магазину | auth, family | **готов** |
 | `/tabs/more/mono` | Монобанк: токен, глубина истории, прогресс импорта по картам | auth, family | **готов** |
 | `/tabs/more/profile` | Профіль: своё имя | auth, family | **готов** |
@@ -27,7 +27,7 @@
 
 Отдельного `/review` нет, см. «Монобанк» в `docs/decisions.md`.
 
-Edge Functions лежат в `supabase/functions/<имя>/index.ts`, выкладываются вручную через Supabase Dashboard. `mono-connect` проверяет токен через client-info и сохраняет его в Vault. `mono-sync` раз в минуту по pg_cron забирает выписку; расписание — `supabase/cron/mono-sync.sql`, выполняется один раз вручную.
+Edge Functions лежат в `supabase/functions/<имя>/index.ts`, выкладываются вручную через Supabase Dashboard. `mono-connect` проверяет токен через client-info и сохраняет его в Vault. `notify` шлёт Web Push: новая общая трата и «Нагадати». `mono-sync` раз в минуту по pg_cron забирает выписку; расписание — `supabase/cron/mono-sync.sql`, выполняется один раз вручную.
 
 Переходы при запуске: нет сессии → `/welcome`; есть сессия, но нет семьи → `/family-setup`; иначе → `/tabs/overview`. Экраны внутри таба лежат вложенными маршрутами, поэтому каждый таб хранит свой стек и таб-бар остаётся виден.
 

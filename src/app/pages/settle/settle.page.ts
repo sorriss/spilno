@@ -1,9 +1,10 @@
 import { Component, inject, resource, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { AlertController, IonButton, IonContent, IonIcon, IonSpinner } from '@ionic/angular';
+import { AlertController, IonButton, IonContent, IonIcon, IonSpinner, ToastController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { arrowForward } from 'ionicons/icons';
 import { formatAmount, formatMoney } from '../../core/money';
+import { notify } from '../../core/push';
 import { uk } from '../../i18n/uk';
 import { nameOf } from '../../shell/tx-row';
 import {
@@ -21,6 +22,7 @@ type Payment = SettleView['payments'][number];
 })
 export class SettlePage {
   private readonly alerts = inject(AlertController);
+  private readonly toasts = inject(ToastController);
 
   protected readonly t = uk;
   protected readonly s = uk.settle;
@@ -78,6 +80,25 @@ export class SettlePage {
       ],
     });
     await alert.present();
+  }
+
+  /** Должник получает push; если сповіщення у него не включены, говорим об этом, а не делаем вид, что дошло. */
+  protected async remind(familyId: string, p: Payment): Promise<void> {
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      const sent = await notify({ type: 'remind', familyId, memberId: p.from.id, amount: p.amount });
+      const toast = await this.toasts.create({
+        message: sent ? this.s.remindSent(p.from.name) : this.s.remindNoDevices(p.from.name),
+        duration: 3000,
+        position: 'top',
+      });
+      await toast.present();
+    } catch {
+      this.error.set(this.s.remindError);
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   protected async forgive(familyId: string, p: Payment): Promise<void> {

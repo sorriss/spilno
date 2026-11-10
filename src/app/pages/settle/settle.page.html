@@ -39,6 +39,7 @@
               <div class="actions">
                 <button type="button" class="primary" [disabled]="busy()" (click)="received(v.familyId, p)">{{ s.received }}</button>
                 <button type="button" class="soft" [disabled]="busy()" (click)="forgive(v.familyId, p)">{{ s.forgive }}</button>
+                <button type="button" class="soft" [disabled]="busy()" (click)="remind(v.familyId, p)">{{ s.remind }}</button>
               </div>
             } @else if (p.from.isMe) {
               <p class="sub">{{ s.payerHint }}</p>

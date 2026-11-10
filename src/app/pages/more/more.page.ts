@@ -1,13 +1,16 @@
 import { Component, inject, resource, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { SwPush } from '@angular/service-worker';
 import { RouterLink } from '@angular/router';
 import { IonButton, IonContent, IonIcon, IonSpinner, NavController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { cardOutline, chevronForward, flashOutline, peopleOutline, personAddOutline, pricetagsOutline, walletOutline } from 'ionicons/icons';
+import { cardOutline, chevronForward, flashOutline, notificationsOutline, peopleOutline, personAddOutline, pricetagsOutline, walletOutline } from 'ionicons/icons';
+import { disablePush, enablePush, pushSupport } from '../../core/push';
 import { uk } from '../../i18n/uk';
 import { signOut } from '../family-setup/family-setup.data';
 import { loadMore } from './more.data';
 
-/** Настройки устройства (Face ID, уведомления) появятся вместе с их функциями. */
+/** Face ID и прочие настройки устройства (Face ID, уведомления) появятся вместе с их функциями. */
 @Component({
   selector: 'app-more',
   imports: [RouterLink, IonContent, IonIcon, IonSpinner, IonButton],
@@ -74,6 +77,26 @@ import { loadMore } from './more.data';
               <ion-icon name="chevron-forward" aria-hidden="true" />
             </a>
           </nav>
+
+          <h2>{{ s.appSection }}</h2>
+          <div class="group">
+            <label class="row switch">
+              <span class="icon tone-0"><ion-icon name="notifications-outline" aria-hidden="true" /></span>
+              <span class="label">
+                {{ s.notifications }}
+                @if (push !== 'ok') {
+                  <small class="note">{{ s.pushHints[push] }}</small>
+                }
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                [checked]="!!subscription()"
+                [disabled]="push !== 'ok' || pushBusy()"
+                (change)="togglePush($any($event.target))"
+              />
+            </label>
+          </div>
         } @else if (view.error()) {
           <section class="state">
             <p>{{ s.loadError }}</p>
@@ -208,6 +231,12 @@ import { loadMore } from './more.data';
       font-size: 15px;
       font-weight: 700;
     }
+    .note {
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 500;
+      color: var(--sp-text-secondary);
+    }
     .value {
       font-size: 13px;
       font-weight: 600;
@@ -246,8 +275,28 @@ export class MorePage {
   protected readonly view = resource({ loader: loadMore });
   protected readonly error = signal('');
 
+  private readonly sw = inject(SwPush);
+  protected push = pushSupport(this.sw);
+  protected readonly subscription = toSignal(this.sw.subscription, { initialValue: null });
+  protected readonly pushBusy = signal(false);
+
   constructor() {
-    addIcons({ cardOutline, chevronForward, flashOutline, peopleOutline, personAddOutline, pricetagsOutline, walletOutline });
+    addIcons({ cardOutline, chevronForward, flashOutline, notificationsOutline, peopleOutline, personAddOutline, pricetagsOutline, walletOutline });
+  }
+
+  protected async togglePush(input: HTMLInputElement): Promise<void> {
+    this.pushBusy.set(true);
+    this.error.set('');
+    try {
+      await (input.checked ? enablePush(this.sw) : disablePush(this.sw));
+    } catch {
+      // Отказ в системном окне тоже сюда: переключатель возвращается, подсказка объясняет, что делать.
+      input.checked = !!this.subscription();
+      this.push = pushSupport(this.sw);
+      if (this.push === 'ok') this.error.set(this.s.pushError);
+    } finally {
+      this.pushBusy.set(false);
+    }
   }
 
   /** Имя, участников и количество меняют вложенные экраны этого же таба. */
