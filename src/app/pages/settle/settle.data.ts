@@ -2,7 +2,7 @@ import { currentMember } from '../../core/family';
 import { parseKopecks, settlementPlan } from '../../core/money';
 import { supabase } from '../../core/supabase';
 import { allMembers, Member, MemberRow, toMember } from '../../core/transactions';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { nameOf } from '../../shell/tx-row';
 
 export type SettlementKind = 'paid' | 'forgiven';
@@ -189,5 +189,5 @@ export function parseReceived(text: string, debt: number): number | null {
 }
 
 export function pairLabel(from: Member, to: Member): string {
-  return `${nameOf(from)} → ${to.isMe ? uk.settle.toYou : to.name}`;
+  return `${nameOf(from)} → ${to.isMe ? i18n.settle.toYou : to.name}`;
 }

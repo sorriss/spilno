@@ -1,6 +1,7 @@
 import { currentMember } from '../../core/family';
 import { supabase } from '../../core/supabase';
 import { allMembers } from '../../core/transactions';
+import { i18n } from '../../i18n';
 
 export type AccountKind = 'cash' | 'card' | 'mono';
 
@@ -50,7 +51,7 @@ export async function loadAccounts(): Promise<AccountsView> {
       ownerId: a.owner_member_id,
       ownerName: members.find((m) => m.id === a.owner_member_id)?.display_name ?? '',
     }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+    .sort((a, b) => a.name.localeCompare(b.name, i18n.locale));
   return {
     familyId: me.familyId,
     meId: me.id,

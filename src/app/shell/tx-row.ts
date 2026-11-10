@@ -7,9 +7,9 @@ import {
 } from 'ionicons/icons';
 import { formatMoney } from '../core/money';
 import { Member, Tx } from '../core/transactions';
-import { uk } from '../i18n/uk';
+import { i18n } from '../i18n';
 
-export const nameOf = (member: Member): string => (member.isMe ? uk.you : member.name);
+export const nameOf = (member: Member): string => (member.isMe ? i18n.you : member.name);
 
 /** Иконки категорий из create_family: новую категорию с другой иконкой регистрировать здесь же. */
 export const CATEGORY_ICONS = {
@@ -104,7 +104,7 @@ export class TxRow {
   readonly tx = input.required<Tx>();
   readonly showShared = input(false);
 
-  protected readonly t = uk.transaction;
+  protected readonly t = i18n.transaction;
 
   protected readonly icon = computed(() => {
     const tx = this.tx();

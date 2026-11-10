@@ -4,7 +4,7 @@ import { IonContent, IonIcon } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { arrowForward } from 'ionicons/icons';
 import { formatAmount, formatMoney } from '../../core/money';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { Logo } from '../../shell/logo';
 
 @Component({
@@ -14,12 +14,12 @@ import { Logo } from '../../shell/logo';
   styleUrl: './welcome.page.scss',
 })
 export class WelcomePage {
-  protected readonly t = uk;
+  protected readonly t = i18n;
   protected readonly step = signal(0);
   protected readonly formatMoney = formatMoney;
   // Суммы только для иллюстраций; 3 × 416,20 = 1 248,60.
-  protected readonly sampleShared = `${formatAmount(1843000, { trimZero: true })} ${uk.currency}`;
-  protected readonly sampleOwed = `+${formatAmount(128500, { trimZero: true })} ${uk.currency}`;
+  protected readonly sampleShared = `${formatAmount(1843000, { trimZero: true })} ${i18n.currency}`;
+  protected readonly sampleOwed = `+${formatAmount(128500, { trimZero: true })} ${i18n.currency}`;
 
   constructor() {
     addIcons({ arrowForward });

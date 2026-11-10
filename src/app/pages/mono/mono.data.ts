@@ -1,6 +1,6 @@
 import { currentMember, MemberRole } from '../../core/family';
 import { supabase } from '../../core/supabase';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 
 export type HistoryMonths = 1 | 3 | 12;
 
@@ -83,7 +83,7 @@ export async function disconnectMono(familyId: string): Promise<void> {
 
 export function monoErrorMessage(error: unknown): string {
   const code = (error as { code?: string }).code;
-  if (code === 'bad_token') return uk.mono.errorBadToken;
-  if (code === 'rate_limit') return uk.mono.errorRateLimit;
-  return uk.mono.errorGeneric;
+  if (code === 'bad_token') return i18n.mono.errorBadToken;
+  if (code === 'rate_limit') return i18n.mono.errorRateLimit;
+  return i18n.mono.errorGeneric;
 }

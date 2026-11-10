@@ -2,7 +2,7 @@ import { Component, inject, resource, signal } from '@angular/core';
 import {
   AlertController, IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonSpinner, IonTitle, IonToolbar,
 } from '@ionic/angular';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { askConfirm, askName } from '../../shell/ask-name';
 import { Account, AccountKind, addAccount, AccountsView, loadAccounts, updateAccount } from './accounts.data';
 
@@ -169,8 +169,8 @@ import { Account, AccountKind, addAccount, AccountsView, loadAccounts, updateAcc
 export class AccountsPage {
   private readonly alerts = inject(AlertController);
 
-  protected readonly t = uk;
-  protected readonly s = uk.accounts;
+  protected readonly t = i18n;
+  protected readonly s = i18n.accounts;
   protected readonly kinds: AccountKind[] = ['cash', 'card'];
   protected readonly kind = signal<AccountKind>('card');
   protected readonly view = resource({ loader: loadAccounts });

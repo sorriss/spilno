@@ -9,6 +9,32 @@ const cors = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+type Lang = 'uk' | 'en' | 'pl';
+
+/** Тексты push на языке устройства получателя (push_subscriptions.lang). */
+const texts = {
+  uk: {
+    sharedExpense: 'Спільна витрата',
+    yourShare: (sum: string) => `ваша частка ${sum}`,
+    reminds: (name: string) => `${name} нагадує про розрахунок`,
+    transfer: (sum: string) => `Переказати ${sum}`,
+  },
+  en: {
+    sharedExpense: 'Shared expense',
+    yourShare: (sum: string) => `your share ${sum}`,
+    reminds: (name: string) => `${name} reminds you to settle up`,
+    transfer: (sum: string) => `Transfer ${sum}`,
+  },
+  pl: {
+    sharedExpense: 'Wspólny wydatek',
+    yourShare: (sum: string) => `twoja część ${sum}`,
+    reminds: (name: string) => `${name} przypomina o rozliczeniu`,
+    transfer: (sum: string) => `Do przelania: ${sum}`,
+  },
+};
+
+type Message = { title: string; body: string; url: string };
+
 const reply = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
@@ -48,17 +74,17 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!tx || !tx.is_shared || tx.created_by_member_id !== me.id) return reply({ error: 'forbidden' }, 403);
     const shares = tx.transaction_shares as { member_id: string; amount: number }[];
-    const what = tx.comment ?? (tx.categories as { name: string } | null)?.name ?? 'Спільна витрата';
+    const what = tx.comment ?? (tx.categories as { name: string } | null)?.name;
     // Своя доля в тексте у каждого своя, поэтому шлём каждому отдельно.
     await Promise.all(
       shares
         .filter((s) => s.member_id !== me.id)
         .map((s) =>
-          send(admin, [s.member_id], {
-            title: `${me.display_name}: ${what}`,
-            body: `${money(tx.amount_base)} · ваша частка ${money(s.amount)}`,
+          send(admin, [s.member_id], (t) => ({
+            title: `${me.display_name}: ${what ?? t.sharedExpense}`,
+            body: `${money(tx.amount_base)} · ${t.yourShare(money(s.amount))}`,
             url: `/tabs/transactions/${tx.id}`,
-          }),
+          })),
         ),
     );
     return reply({ ok: true });
@@ -77,41 +103,45 @@ Deno.serve(async (req) => {
     if (!(mine > 0 && theirs < 0 && Number.isInteger(amount) && amount > 0 && amount <= Math.min(mine, -theirs))) {
       return reply({ error: 'forbidden' }, 403);
     }
-    const sent = await send(admin, [body.memberId], {
-      title: `${me.display_name} нагадує про розрахунок`,
-      body: `Переказати ${money(amount)}`,
+    const sent = await send(admin, [body.memberId], (t) => ({
+      title: t.reminds(me.display_name),
+      body: t.transfer(money(amount)),
       url: '/tabs/settle',
-    });
+    }));
     return reply({ ok: true, sent });
   }
 
   return reply({ error: 'bad_request' }, 400);
 });
 
-/** Шлёт на все устройства участников; отписавшиеся устройства (404/410) удаляет. Возвращает число доставок. */
+/**
+ * Шлёт на все устройства участников, каждому на языке устройства; отписавшиеся устройства (404/410) удаляет.
+ * Возвращает число доставок.
+ */
 async function send(
   admin: ReturnType<typeof createClient>,
   memberIds: string[],
-  message: { title: string; body: string; url: string },
+  compose: (t: (typeof texts)[Lang]) => Message,
 ): Promise<number> {
   webpush.setVapidDetails('mailto:hello@spilno.cc', Deno.env.get('VAPID_PUBLIC_KEY')!, Deno.env.get('VAPID_PRIVATE_KEY')!);
   const { data: members } = await admin.from('family_members').select('user_id').in('id', memberIds);
   const users = (members ?? []).map((m) => m.user_id);
   if (!users.length) return 0;
-  const { data: subs } = await admin.from('push_subscriptions').select('endpoint, p256dh, auth').in('user_id', users);
+  const { data: subs } = await admin.from('push_subscriptions').select('endpoint, p256dh, auth, lang').in('user_id', users);
 
-  // Формат Angular Service Worker: по нажатию открывает приложение на нужном экране.
-  const payload = JSON.stringify({
-    notification: {
-      title: message.title,
-      body: message.body,
-      icon: '/icons/icon-192.png',
-      data: { onActionClick: { default: { operation: 'navigateLastFocusedOrOpen', url: message.url } } },
-    },
-  });
   let delivered = 0;
   await Promise.all(
     (subs ?? []).map(async (s) => {
+      const message = compose(texts[s.lang as Lang] ?? texts.uk);
+      // Формат Angular Service Worker: по нажатию открывает приложение на нужном экране.
+      const payload = JSON.stringify({
+        notification: {
+          title: message.title,
+          body: message.body,
+          icon: '/icons/icon-192.png',
+          data: { onActionClick: { default: { operation: 'navigateLastFocusedOrOpen', url: message.url } } },
+        },
+      });
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
         delivered++;

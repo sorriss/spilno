@@ -5,7 +5,7 @@ import {
 } from '@ionic/angular';
 import { RouterLink } from '@angular/router';
 import { formatMoney } from '../../core/money';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { nameOf, TxRow } from '../../shell/tx-row';
 import { deleteTransaction, loadDetails } from './transaction-details.data';
 
@@ -191,8 +191,8 @@ export class TransactionDetailsPage {
   /** Из маршрута :id. */
   readonly id = input.required<string>();
 
-  protected readonly t = uk;
-  protected readonly s = uk.transactionDetails;
+  protected readonly t = i18n;
+  protected readonly s = i18n.transactionDetails;
   protected readonly name = nameOf;
   protected readonly details = resource({ params: () => this.id(), loader: ({ params }) => loadDetails(params) });
   protected readonly busy = signal(false);
@@ -208,7 +208,7 @@ export class TransactionDetailsPage {
   }
 
   protected date(iso: string): string {
-    return new Date(iso).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
+    return new Date(iso).toLocaleDateString(i18n.locale, { day: 'numeric', month: 'long', year: 'numeric' });
   }
 
   protected async confirmDelete(): Promise<void> {

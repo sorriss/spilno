@@ -1,6 +1,6 @@
 import { Component, input } from '@angular/core';
 import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
-import { uk } from '../i18n/uk';
+import { i18n } from '../i18n';
 
 /** Заглушка для экранов каркаса: заголовок и «назад» берёт из data маршрута. */
 @Component({
@@ -21,5 +21,5 @@ import { uk } from '../i18n/uk';
 export class PlaceholderPage {
   readonly title = input.required<string>();
   readonly back = input<string>();
-  protected readonly t = uk;
+  protected readonly t = i18n;
 }

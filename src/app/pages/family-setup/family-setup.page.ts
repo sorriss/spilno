@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { IonContent, IonIcon, NavController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { add, enterOutline } from 'ionicons/icons';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { createFamily, familyErrorMessage, joinFamily, signOut } from './family-setup.data';
 
 @Component({
@@ -14,7 +14,7 @@ import { createFamily, familyErrorMessage, joinFamily, signOut } from './family-
 export class FamilySetupPage {
   private readonly nav = inject(NavController);
 
-  protected readonly t = uk;
+  protected readonly t = i18n;
   protected readonly joining = signal(false);
   protected readonly busy = signal(false);
   protected readonly error = signal('');
@@ -36,7 +36,7 @@ export class FamilySetupPage {
     const memberName = value('memberName');
     const other = value(this.joining() ? 'inviteCode' : 'familyName');
     if (!memberName || !other) {
-      this.error.set(uk.familySetup.errorEmpty);
+      this.error.set(i18n.familySetup.errorEmpty);
       return;
     }
 

@@ -5,7 +5,7 @@ import { addIcons } from 'ionicons';
 import { arrowForward } from 'ionicons/icons';
 import { formatAmount, formatMoney } from '../../core/money';
 import { notify } from '../../core/push';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { nameOf } from '../../shell/tx-row';
 import {
   addSettlement, loadSettle, pairLabel, parseReceived, Settlement, SettlementKind, SettleView, startPayment, undoSettlement,
@@ -24,8 +24,8 @@ export class SettlePage {
   private readonly alerts = inject(AlertController);
   private readonly toasts = inject(ToastController);
 
-  protected readonly t = uk;
-  protected readonly s = uk.settle;
+  protected readonly t = i18n;
+  protected readonly s = i18n.settle;
   protected readonly name = nameOf;
   protected readonly label = pairLabel;
   protected readonly view = resource({ loader: loadSettle });

@@ -3,17 +3,17 @@ import { AlertController, IonIcon } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { checkmark, heartOutline } from 'ionicons/icons';
 import { formatMoney } from '../../core/money';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { pairLabel, Settlement } from './settle.data';
 
 /** Спрашивает подтверждение отмены расчёта; действие выполняет вызывающая страница. */
 export async function askUndo(alerts: AlertController, s: Settlement, onConfirm: () => void): Promise<void> {
   const alert = await alerts.create({
-    header: uk.settle.undoTitle,
-    message: `${pairLabel(s.from, s.to)}: ${formatMoney(s.amount)}. ${uk.settle.undoHint}`,
+    header: i18n.settle.undoTitle,
+    message: `${pairLabel(s.from, s.to)}: ${formatMoney(s.amount)}. ${i18n.settle.undoHint}`,
     buttons: [
-      { text: uk.settle.cancel, role: 'cancel' },
-      { text: uk.settle.undo, role: 'destructive', handler: onConfirm },
+      { text: i18n.settle.cancel, role: 'cancel' },
+      { text: i18n.settle.undo, role: 'destructive', handler: onConfirm },
     ],
   });
   await alert.present();
@@ -100,7 +100,7 @@ export class SettlementRowComponent {
   readonly busy = input(false);
   readonly undo = output();
 
-  protected readonly t = uk.settle;
+  protected readonly t = i18n.settle;
 
   constructor() {
     addIcons({ checkmark, heartOutline });
@@ -111,7 +111,7 @@ export class SettlementRowComponent {
   }
 
   protected date(): string {
-    return this.settlement().createdAt.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
+    return this.settlement().createdAt.toLocaleDateString(i18n.locale, { day: 'numeric', month: 'long', year: 'numeric' });
   }
 
   protected money(): string {

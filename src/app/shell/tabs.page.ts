@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { IonIcon, IonLabel, IonTabBar, IonTabButton, IonTabs } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { add, ellipsisHorizontal, gridOutline, listOutline, swapHorizontalOutline } from 'ionicons/icons';
-import { uk } from '../i18n/uk';
+import { i18n } from '../i18n';
 
 @Component({
   selector: 'app-tabs',
@@ -64,7 +64,7 @@ import { uk } from '../i18n/uk';
   `,
 })
 export class TabsPage {
-  protected readonly t = uk;
+  protected readonly t = i18n;
 
   constructor() {
     addIcons({ add, ellipsisHorizontal, gridOutline, listOutline, swapHorizontalOutline });

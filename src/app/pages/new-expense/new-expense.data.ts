@@ -1,6 +1,7 @@
 import { currentMember, MemberRole } from '../../core/family';
 import { parseKopecks, splitByWeights } from '../../core/money';
 import { supabase } from '../../core/supabase';
+import { i18n } from '../../i18n';
 
 export type TxType = 'expense' | 'income' | 'transfer';
 export type SplitMode = 'equal' | 'shares' | 'amounts';
@@ -116,7 +117,7 @@ export async function loadNewExpense(id?: string): Promise<NewExpenseData | null
     members: members
       .data!.filter((m) => !m.left_at || involved.has(m.id))
       .map((m) => ({ id: m.id, name: m.display_name, colorIndex: m.color_index })),
-    categories: (categories.data as NewExpenseData['categories']).sort((a, b) => a.name.localeCompare(b.name, 'uk')),
+    categories: (categories.data as NewExpenseData['categories']).sort((a, b) => a.name.localeCompare(b.name, i18n.locale)),
     accounts: accounts.data!,
     editing: tx && {
       id: tx.id,

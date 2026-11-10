@@ -5,7 +5,7 @@ import {
 import { addIcons } from 'ionicons';
 import { chevronBack, chevronForward } from 'ionicons/icons';
 import { formatAmount } from '../../core/money';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { CATEGORY_ICONS } from '../../shell/tx-row';
 import { loadAnalytics } from './analytics.data';
 
@@ -296,8 +296,8 @@ type View = 'family' | 'mine';
   `,
 })
 export class AnalyticsPage {
-  protected readonly t = uk;
-  protected readonly s = uk.analytics;
+  protected readonly t = i18n;
+  protected readonly s = i18n.analytics;
   protected readonly views: View[] = ['family', 'mine'];
   protected readonly view = signal<View>('family');
   protected readonly month = signal(startOfMonth(new Date()));
@@ -320,7 +320,7 @@ export class AnalyticsPage {
   }
 
   protected label(m: Date): string {
-    return `${uk.months[m.getMonth()]} ${m.getFullYear()}`;
+    return `${i18n.months[m.getMonth()]} ${m.getFullYear()}`;
   }
 
   protected amount(kopecks: number): string {

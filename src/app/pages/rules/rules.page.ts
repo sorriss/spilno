@@ -4,7 +4,7 @@ import {
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { trashOutline } from 'ionicons/icons';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { addRule, deleteRule, loadRules, Rule, RulesView } from './rules.data';
 
 type Kind = 'category' | 'merchant';
@@ -139,8 +139,8 @@ type Kind = 'category' | 'merchant';
   `,
 })
 export class RulesPage {
-  protected readonly t = uk;
-  protected readonly s = uk.rules;
+  protected readonly t = i18n;
+  protected readonly s = i18n.rules;
   protected readonly view = resource({ loader: loadRules });
   protected readonly kind = signal<Kind>('category');
   /** Кого не делить; по умолчанию делим на всех. */

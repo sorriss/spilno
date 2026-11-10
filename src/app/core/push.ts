@@ -1,6 +1,7 @@
 import { SwPush } from '@angular/service-worker';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { Lang, lang } from '../i18n';
 import { supabase } from './supabase';
 
 /**
@@ -23,6 +24,7 @@ export async function enablePush(sw: SwPush): Promise<void> {
     sub_endpoint: sub.endpoint,
     sub_p256dh: sub.keys!['p256dh'],
     sub_auth: sub.keys!['auth'],
+    sub_lang: lang,
   });
   if (error) throw error;
 }
@@ -31,6 +33,14 @@ export async function disablePush(sw: SwPush): Promise<void> {
   const sub = await firstValueFrom(sw.subscription);
   if (sub) await supabase!.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
   await sw.unsubscribe();
+}
+
+/** Push приходят на языке устройства: при смене языка обновляем язык подписки этого устройства. */
+export async function setPushLang(sw: SwPush, next: Lang): Promise<void> {
+  const sub = await firstValueFrom(sw.subscription);
+  if (!sub) return;
+  const { error } = await supabase!.from('push_subscriptions').update({ lang: next }).eq('endpoint', sub.endpoint);
+  if (error) throw error;
 }
 
 export type NotifyRequest =

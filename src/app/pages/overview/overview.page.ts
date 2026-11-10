@@ -4,7 +4,7 @@ import { IonButton, IonContent, IonIcon, IonSpinner } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { chevronBack, chevronDown, chevronForward } from 'ionicons/icons';
 import { formatAmount, formatMoney } from '../../core/money';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { nameOf, TxRow } from '../../shell/tx-row';
 import { isDemo, loadOverview } from './overview.data';
 
@@ -15,7 +15,7 @@ import { isDemo, loadOverview } from './overview.data';
   styleUrl: './overview.page.scss',
 })
 export class OverviewPage {
-  protected readonly t = uk;
+  protected readonly t = i18n;
   protected readonly isDemo = isDemo;
   protected readonly formatMoney = formatMoney;
   protected readonly formatAmount = formatAmount;
@@ -23,7 +23,7 @@ export class OverviewPage {
 
   protected readonly month = signal(startOfMonth(new Date()));
   protected readonly monthLabel = computed(
-    () => `${uk.months[this.month().getMonth()]} ${this.month().getFullYear()}`,
+    () => `${i18n.months[this.month().getMonth()]} ${this.month().getFullYear()}`,
   );
   protected readonly isCurrentMonth = computed(() => this.month() >= startOfMonth(new Date()));
 

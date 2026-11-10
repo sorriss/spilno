@@ -7,7 +7,7 @@ import { close } from 'ionicons/icons';
 import { MemberRole } from '../../core/family';
 import { formatMoney } from '../../core/money';
 import { askConfirm } from '../../shell/ask-name';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { FamilyView, Invite, createInvite, loadFamily, removeMember, setMemberRole } from './family.data';
 
 @Component({
@@ -17,7 +17,7 @@ import { FamilyView, Invite, createInvite, loadFamily, removeMember, setMemberRo
   styleUrl: './family.page.scss',
 })
 export class FamilyPage {
-  protected readonly t = uk;
+  protected readonly t = i18n;
   protected readonly canShare = typeof navigator.share === 'function';
   protected readonly family = resource({ loader: loadFamily });
   protected readonly busy = signal(false);
@@ -45,10 +45,10 @@ export class FamilyPage {
   protected remove(m: FamilyView['members'][number]): Promise<void> {
     this.memberError.set('');
     if (m.balance !== 0) {
-      this.memberError.set(uk.family.removeHasBalance(m.name, formatMoney(m.balance, { plus: true })));
+      this.memberError.set(i18n.family.removeHasBalance(m.name, formatMoney(m.balance, { plus: true })));
       return Promise.resolve();
     }
-    return askConfirm(this.alerts, uk.family.removeTitle, uk.family.removeHint(m.name), uk.family.remove, () =>
+    return askConfirm(this.alerts, i18n.family.removeTitle, i18n.family.removeHint(m.name), i18n.family.remove, () =>
       void this.runMember(() => removeMember(m.id)),
     );
   }
@@ -60,7 +60,7 @@ export class FamilyPage {
     try {
       await action();
     } catch {
-      this.memberError.set(uk.family.saveError);
+      this.memberError.set(i18n.family.saveError);
     } finally {
       this.busy.set(false);
       this.family.reload(); // в том числе возвращает выпадающий список к значению из базы
@@ -68,8 +68,8 @@ export class FamilyPage {
   }
 
   protected expires(invite: Invite): string {
-    const date = invite.expiresAt.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
-    return uk.family.inviteExpires(date);
+    const date = invite.expiresAt.toLocaleDateString(i18n.locale, { day: 'numeric', month: 'long' });
+    return i18n.family.inviteExpires(date);
   }
 
   protected async create(familyId: string): Promise<void> {
@@ -80,7 +80,7 @@ export class FamilyPage {
       await createInvite(familyId);
       this.family.reload();
     } catch {
-      this.notice.set(uk.family.inviteError);
+      this.notice.set(i18n.family.inviteError);
     } finally {
       this.busy.set(false);
     }
@@ -89,18 +89,18 @@ export class FamilyPage {
   protected async copy(code: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(code);
-      this.notice.set(uk.family.copied);
+      this.notice.set(i18n.family.copied);
     } catch {
-      this.notice.set(uk.family.copyError);
+      this.notice.set(i18n.family.copyError);
     }
   }
 
   protected async share(code: string, familyName: string): Promise<void> {
     try {
-      await navigator.share({ text: uk.family.shareText(familyName, code) });
+      await navigator.share({ text: i18n.family.shareText(familyName, code) });
     } catch (e) {
       // AbortError: пользователь сам закрыл окно «Поделиться».
-      if ((e as Error).name !== 'AbortError') this.notice.set(uk.family.copyError);
+      if ((e as Error).name !== 'AbortError') this.notice.set(i18n.family.copyError);
     }
   }
 }

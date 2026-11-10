@@ -64,6 +64,30 @@ function money(kopecks: number): string {
   return `${whole}${rest ? `,${String(rest).padStart(2, '0')}` : ''} ₴`;
 }
 
+type Lang = 'uk' | 'en' | 'pl';
+
+/** Тексты push на языке устройства получателя (push_subscriptions.lang); те же, что у функции notify. */
+const texts = {
+  uk: {
+    sharedExpense: 'Спільна витрата',
+    yourShare: (sum: string) => `ваша частка ${sum}`,
+    settled: (name: string) => `Борг закрито: ${name}`,
+    found: (sum: string) => `Переказ ${sum} знайдено у виписці mono`,
+  },
+  en: {
+    sharedExpense: 'Shared expense',
+    yourShare: (sum: string) => `your share ${sum}`,
+    settled: (name: string) => `Debt settled: ${name}`,
+    found: (sum: string) => `Transfer of ${sum} found in the mono statement`,
+  },
+  pl: {
+    sharedExpense: 'Wspólny wydatek',
+    yourShare: (sum: string) => `twoja część ${sum}`,
+    settled: (name: string) => `Dług rozliczony: ${name}`,
+    found: (sum: string) => `Przelew ${sum} znaleziony w wyciągu mono`,
+  },
+};
+
 /** Push участнику to_member: долг закрыт переводом, найденным в выписке, или правило сделало трату общей. */
 async function notifyEvent(admin: ReturnType<typeof createClient>, event: Event): Promise<void> {
   const { data: members } = await admin
@@ -73,30 +97,33 @@ async function notifyEvent(admin: ReturnType<typeof createClient>, event: Event)
   const payer = members?.find((m) => m.id === event.from_member);
   const payee = members?.find((m) => m.id === event.to_member);
   if (!payer || !payee) return;
-  const { data: subs } = await admin.from('push_subscriptions').select('endpoint, p256dh, auth').eq('user_id', payee.user_id);
+  const { data: subs } = await admin.from('push_subscriptions').select('endpoint, p256dh, auth, lang').eq('user_id', payee.user_id);
   if (!subs?.length) return;
 
   webpush.setVapidDetails('mailto:hello@spilno.cc', Deno.env.get('VAPID_PUBLIC_KEY')!, Deno.env.get('VAPID_PRIVATE_KEY')!);
-  // Тексты — как у функции notify для ручных трат.
-  const message =
-    event.kind === 'settled'
-      ? { title: `Борг закрито: ${payer.display_name}`, body: `Переказ ${money(event.amount)} знайдено у виписці mono`, url: '/tabs/settle' }
-      : {
-          title: `${payer.display_name}: ${event.label ?? 'Спільна витрата'}`,
-          body: `${money(event.total)} · ваша частка ${money(event.amount)}`,
-          url: `/tabs/transactions/${event.ref_id}`,
-        };
-  const payload = JSON.stringify({
-    notification: {
-      title: message.title,
-      body: message.body,
-      icon: '/icons/icon-192.png',
-      data: { onActionClick: { default: { operation: 'navigateLastFocusedOrOpen', url: message.url } } },
-    },
-  });
+  // Тексты — как у функции notify для ручных трат; у каждого устройства свой язык.
+  const payloadFor = (lang: string) => {
+    const t = texts[lang as Lang] ?? texts.uk;
+    const message =
+      event.kind === 'settled'
+        ? { title: t.settled(payer.display_name), body: t.found(money(event.amount)), url: '/tabs/settle' }
+        : {
+            title: `${payer.display_name}: ${event.label ?? t.sharedExpense}`,
+            body: `${money(event.total)} · ${t.yourShare(money(event.amount))}`,
+            url: `/tabs/transactions/${event.ref_id}`,
+          };
+    return JSON.stringify({
+      notification: {
+        title: message.title,
+        body: message.body,
+        icon: '/icons/icon-192.png',
+        data: { onActionClick: { default: { operation: 'navigateLastFocusedOrOpen', url: message.url } } },
+      },
+    });
+  };
   await Promise.all(
     subs.map((s) =>
-      webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload).catch(async (e) => {
+      webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payloadFor(s.lang)).catch(async (e) => {
         const status = (e as { statusCode?: number }).statusCode;
         if (status === 404 || status === 410) await admin.from('push_subscriptions').delete().eq('endpoint', s.endpoint);
         else console.error(status, e);

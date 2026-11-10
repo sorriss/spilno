@@ -6,7 +6,7 @@ import { addIcons } from 'ionicons';
 import { close } from 'ionicons/icons';
 import { formatMoney, parseKopecks } from '../../core/money';
 import { notify } from '../../core/push';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import {
   computeShares, EditTx, loadNewExpense, NewExpenseData, saveTransaction, ShareRow, SplitMode, TxType,
 } from './new-expense.data';
@@ -32,8 +32,8 @@ export class NewExpensePage {
   /** Из маршрута /edit/:id; без него форма создаёт новую операцию. */
   readonly id = input<string>();
 
-  protected readonly t = uk;
-  protected readonly s = uk.newExpense;
+  protected readonly t = i18n;
+  protected readonly s = i18n.newExpense;
   protected readonly data = resource({
     params: () => ({ id: this.id() }),
     loader: async ({ params }) => {

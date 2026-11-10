@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
-import { uk } from '../i18n/uk';
+import { i18n } from '../i18n';
 
 /** Условия и конфиденциальность: открывается без входа, ссылка с экрана входа. */
 @Component({
@@ -26,5 +26,5 @@ import { uk } from '../i18n/uk';
   `,
 })
 export class PrivacyPage {
-  protected readonly t = uk;
+  protected readonly t = i18n;
 }

@@ -4,7 +4,7 @@ import {
 } from '@ionic/angular';
 import { currentMember } from '../../core/family';
 import { supabase } from '../../core/supabase';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { normalizePayLink } from '../settle/settle.data';
 
 async function loadProfile() {
@@ -99,8 +99,8 @@ async function loadProfile() {
 export class ProfilePage {
   private readonly nav = inject(NavController);
 
-  protected readonly t = uk;
-  protected readonly s = uk.profile;
+  protected readonly t = i18n;
+  protected readonly s = i18n.profile;
   protected readonly profile = resource({ loader: loadProfile });
   protected readonly busy = signal(false);
   protected readonly error = signal('');

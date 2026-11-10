@@ -2,7 +2,7 @@ import { Component, inject, resource, signal } from '@angular/core';
 import {
   AlertController, IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonSpinner, IonTitle, IonToolbar,
 } from '@ionic/angular';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { loadHistory, Settlement, undoSettlement } from './settle.data';
 import { askUndo, SettlementRowComponent } from './settlement-row';
 
@@ -71,8 +71,8 @@ import { askUndo, SettlementRowComponent } from './settlement-row';
   `,
 })
 export class SettleHistoryPage {
-  protected readonly t = uk;
-  protected readonly s = uk.settle;
+  protected readonly t = i18n;
+  protected readonly s = i18n.settle;
   protected readonly history = resource({ loader: loadHistory });
   protected readonly busy = signal(false);
   protected readonly error = signal('');

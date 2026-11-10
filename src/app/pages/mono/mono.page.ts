@@ -2,7 +2,7 @@ import { Component, DestroyRef, inject, resource, signal } from '@angular/core';
 import {
   AlertController, IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonSpinner, IonTitle, IonToolbar,
 } from '@ionic/angular';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { connectMono, disconnectMono, HistoryMonths, loadMono, monoErrorMessage, setHistory } from './mono.data';
 
 @Component({
@@ -161,8 +161,8 @@ import { connectMono, disconnectMono, HistoryMonths, loadMono, monoErrorMessage,
 export class MonoPage {
   private readonly alerts = inject(AlertController);
 
-  protected readonly t = uk;
-  protected readonly s = uk.mono;
+  protected readonly t = i18n;
+  protected readonly s = i18n.mono;
   protected readonly depths: HistoryMonths[] = [1, 3, 12];
   protected readonly view = resource({ loader: loadMono });
   protected readonly busy = signal(false);

@@ -3,7 +3,7 @@ import { IonContent, IonIcon, NavController } from '@ionic/angular';
 import { RouterLink } from '@angular/router';
 import { addIcons } from 'ionicons';
 import { chevronBack } from 'ionicons/icons';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { Logo } from '../../shell/logo';
 import { sendCode, signInErrorMessage, verifyCode } from './sign-in.data';
 
@@ -23,7 +23,7 @@ export class SignInPage implements OnDestroy {
   private readonly nav = inject(NavController);
   private timer?: ReturnType<typeof setInterval>;
 
-  protected readonly t = uk;
+  protected readonly t = i18n;
   protected readonly email = signal('');
   protected readonly codeSent = signal(false);
   protected readonly busy = signal(false);

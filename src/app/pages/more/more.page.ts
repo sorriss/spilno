@@ -4,9 +4,9 @@ import { SwPush } from '@angular/service-worker';
 import { RouterLink } from '@angular/router';
 import { IonButton, IonContent, IonIcon, IonSpinner, NavController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { cardOutline, chevronForward, flashOutline, notificationsOutline, peopleOutline, personAddOutline, pricetagsOutline, walletOutline } from 'ionicons/icons';
-import { disablePush, enablePush, pushSupport } from '../../core/push';
-import { uk } from '../../i18n/uk';
+import { cardOutline, chevronForward, flashOutline, languageOutline, notificationsOutline, peopleOutline, personAddOutline, pricetagsOutline, walletOutline } from 'ionicons/icons';
+import { disablePush, enablePush, pushSupport, setPushLang } from '../../core/push';
+import { i18n, Lang, lang, LANGUAGES, setLang } from '../../i18n';
 import { signOut } from '../family-setup/family-setup.data';
 import { loadMore } from './more.data';
 
@@ -95,6 +95,15 @@ import { loadMore } from './more.data';
                 [disabled]="push !== 'ok' || pushBusy()"
                 (change)="togglePush($any($event.target))"
               />
+            </label>
+            <label class="row">
+              <span class="icon tone-2"><ion-icon name="language-outline" aria-hidden="true" /></span>
+              <span class="label">{{ s.language }}</span>
+              <select class="lang" [value]="lang" (change)="changeLang($any($event.target).value)">
+                @for (l of languages; track l[0]) {
+                  <option [value]="l[0]" [selected]="l[0] === lang">{{ l[1] }}</option>
+                }
+              </select>
             </label>
           </div>
         } @else if (view.error()) {
@@ -231,6 +240,16 @@ import { loadMore } from './more.data';
       font-size: 15px;
       font-weight: 700;
     }
+    .lang {
+      min-height: 44px;
+      border: 0;
+      background: none;
+      color: var(--sp-text-secondary);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: right;
+    }
     .note {
       font-size: 12px;
       line-height: 16px;
@@ -270,8 +289,8 @@ import { loadMore } from './more.data';
 export class MorePage {
   private readonly nav = inject(NavController);
 
-  protected readonly t = uk;
-  protected readonly s = uk.more;
+  protected readonly t = i18n;
+  protected readonly s = i18n.more;
   protected readonly view = resource({ loader: loadMore });
   protected readonly error = signal('');
 
@@ -279,9 +298,17 @@ export class MorePage {
   protected push = pushSupport(this.sw);
   protected readonly subscription = toSignal(this.sw.subscription, { initialValue: null });
   protected readonly pushBusy = signal(false);
+  protected readonly lang = lang;
+  protected readonly languages = Object.entries(LANGUAGES) as [Lang, string][];
 
   constructor() {
-    addIcons({ cardOutline, chevronForward, flashOutline, notificationsOutline, peopleOutline, personAddOutline, pricetagsOutline, walletOutline });
+    addIcons({ cardOutline, chevronForward, flashOutline, languageOutline, notificationsOutline, peopleOutline, personAddOutline, pricetagsOutline, walletOutline });
+  }
+
+  /** Язык push этого устройства обновляем до перезагрузки; если не вышло, интерфейс всё равно переключится. */
+  protected async changeLang(next: Lang): Promise<void> {
+    await setPushLang(this.sw, next).catch(() => undefined);
+    setLang(next);
   }
 
   protected async togglePush(input: HTMLInputElement): Promise<void> {
@@ -309,7 +336,7 @@ export class MorePage {
       await signOut();
       await this.nav.navigateRoot('/welcome');
     } catch {
-      this.error.set(uk.more.signOutError);
+      this.error.set(i18n.more.signOutError);
     }
   }
 }

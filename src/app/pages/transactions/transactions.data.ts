@@ -1,7 +1,7 @@
 import { currentMember } from '../../core/family';
 import { supabase } from '../../core/supabase';
 import { allMembers, Tx, TX_FIELDS, toTx, TxRow } from '../../core/transactions';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 
 export type TxFilter = 'all' | 'shared' | 'mine';
 
@@ -18,10 +18,10 @@ const dayKey = (d: Date): string => `${d.getFullYear()}-${d.getMonth()}-${d.getD
 function dayLabel(date: Date, now: Date): string {
   const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long' };
   if (date.getFullYear() !== now.getFullYear()) options.year = 'numeric';
-  const text = date.toLocaleDateString('uk-UA', options);
-  if (dayKey(date) === dayKey(now)) return uk.transactions.today(text);
+  const text = date.toLocaleDateString(i18n.locale, options);
+  if (dayKey(date) === dayKey(now)) return i18n.transactions.today(text);
   const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-  return dayKey(date) === dayKey(yesterday) ? uk.transactions.yesterday(text) : text;
+  return dayKey(date) === dayKey(yesterday) ? i18n.transactions.yesterday(text) : text;
 }
 
 /** Группирует уже отсортированные операции по локальному дню. */

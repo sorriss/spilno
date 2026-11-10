@@ -1,5 +1,6 @@
 import { currentMember } from '../../core/family';
 import { supabase } from '../../core/supabase';
+import { i18n } from '../../i18n';
 
 export type CategoryKind = 'expense' | 'income';
 
@@ -30,7 +31,7 @@ export async function loadCategories(): Promise<CategoriesView> {
     canEdit: me.role !== 'viewer',
     categories: data
       .map((c) => ({ id: c.id, name: c.name, kind: c.kind as CategoryKind, icon: c.icon, colorIndex: c.color_index }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'uk')),
+      .sort((a, b) => a.name.localeCompare(b.name, i18n.locale)),
   };
 }
 

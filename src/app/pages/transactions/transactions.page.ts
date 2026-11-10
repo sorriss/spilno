@@ -2,7 +2,7 @@ import { Component, resource, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonButton, IonContent, IonSpinner } from '@ionic/angular';
 import { formatMoney } from '../../core/money';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { TxRow } from '../../shell/tx-row';
 import { loadTransactions, TxFilter } from './transactions.data';
 
@@ -100,8 +100,8 @@ const PAGE = 50;
   `,
 })
 export class TransactionsPage {
-  protected readonly t = uk;
-  protected readonly s = uk.transactions;
+  protected readonly t = i18n;
+  protected readonly s = i18n.transactions;
   protected readonly filters: TxFilter[] = ['all', 'shared', 'mine'];
   protected readonly filter = signal<TxFilter>('all');
   private readonly limit = signal(PAGE);

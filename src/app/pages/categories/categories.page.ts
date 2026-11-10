@@ -2,7 +2,7 @@ import { Component, computed, inject, resource, signal } from '@angular/core';
 import {
   AlertController, IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonSpinner, IonTitle, IonToolbar,
 } from '@ionic/angular';
-import { uk } from '../../i18n/uk';
+import { i18n } from '../../i18n';
 import { askConfirm, askName } from '../../shell/ask-name';
 import { addCategory, CategoriesView, Category, CategoryKind, loadCategories, updateCategory } from './categories.data';
 import { addIcons } from 'ionicons';
@@ -139,8 +139,8 @@ import {
 export class CategoriesPage {
   private readonly alerts = inject(AlertController);
 
-  protected readonly t = uk;
-  protected readonly s = uk.categories;
+  protected readonly t = i18n;
+  protected readonly s = i18n.categories;
   protected readonly kinds: CategoryKind[] = ['expense', 'income'];
   protected readonly kind = signal<CategoryKind>('expense');
   protected readonly view = resource({ loader: loadCategories });

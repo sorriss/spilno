@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, familyGuard, guestGuard } from './core/guards';
-import { uk } from './i18n/uk';
+import { i18n } from './i18n';
 
 const placeholder = () => import('./pages/placeholder.page').then((m) => m.PlaceholderPage);
 
@@ -105,7 +105,7 @@ export const routes: Routes = [
         path: 'more/rules',
         loadComponent: () => import('./pages/rules/rules.page').then((m) => m.RulesPage),
       },
-      stub('more/settings', uk.pages.settings, '/tabs/more'),
+      stub('more/settings', i18n.pages.settings, '/tabs/more'),
     ],
   },
 

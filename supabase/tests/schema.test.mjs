@@ -544,14 +544,17 @@ test('аналитика: Сім’я — общие траты, Мої — ли
 });
 
 test('push-подписки видит только владелец; устройство переходит к новому пользователю', async () => {
-  await as(ANDRII, `select claim_push_subscription('https://push/e1', 'p', 'a')`);
+  await as(ANDRII, `select claim_push_subscription('https://push/e1', 'p', 'a', 'uk')`);
   assert.equal((await as(ANDRII, 'select 1 from push_subscriptions')).length, 1);
   assert.equal((await as(OLENA, 'select 1 from push_subscriptions')).length, 0);
   await assert.rejects(as(OLENA, `insert into push_subscriptions (endpoint, user_id, p256dh, auth) values ('x', $1, 'p', 'a')`, [ANDRII]), /row-level security/);
 
-  await as(OLENA, `select claim_push_subscription('https://push/e1', 'p2', 'a2')`);
+  await as(OLENA, `select claim_push_subscription('https://push/e1', 'p2', 'a2', 'pl')`);
   assert.equal((await as(ANDRII, 'select 1 from push_subscriptions')).length, 0);
-  assert.equal((await as(OLENA, 'select p256dh from push_subscriptions'))[0].p256dh, 'p2');
+  assert.deepEqual(Object.values((await as(OLENA, 'select p256dh, lang from push_subscriptions'))[0]), ['p2', 'pl']);
+  await assert.rejects(as(OLENA, `select claim_push_subscription('https://push/e2', 'p', 'a', 'ru')`), /check/);
+  await as(OLENA, `update push_subscriptions set lang = 'en' where endpoint = 'https://push/e1'`);
+  assert.equal((await as(OLENA, 'select lang from push_subscriptions'))[0].lang, 'en');
   await as(OLENA, 'delete from push_subscriptions');
 });
 

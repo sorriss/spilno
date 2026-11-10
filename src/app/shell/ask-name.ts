@@ -1,5 +1,5 @@
 import { AlertController } from '@ionic/angular';
-import { uk } from '../i18n/uk';
+import { i18n } from '../i18n';
 
 /** Окно с одним полем названия. Пустое значение окно не закрывает. */
 export async function askName(
@@ -12,9 +12,9 @@ export async function askName(
     header,
     inputs: [{ name: 'name', type: 'text', value, attributes: { maxlength: 60, 'aria-label': header } }],
     buttons: [
-      { text: uk.cancel, role: 'cancel' },
+      { text: i18n.cancel, role: 'cancel' },
       {
-        text: uk.save,
+        text: i18n.save,
         handler: ({ name }: { name: string }) => {
           if (!name.trim()) return false;
           onSave(name.trim());
@@ -38,7 +38,7 @@ export async function askConfirm(
     header,
     message,
     buttons: [
-      { text: uk.cancel, role: 'cancel' },
+      { text: i18n.cancel, role: 'cancel' },
       { text: action, role: 'destructive', handler: onConfirm },
     ],
   });

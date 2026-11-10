@@ -1,5 +1,6 @@
 import { currentMember, MemberRole } from '../../core/family';
 import { supabase } from '../../core/supabase';
+import { i18n } from '../../i18n';
 
 export interface Rule {
   id: string;
@@ -57,7 +58,7 @@ export async function loadRules(): Promise<RulesView> {
       memberIds: r.member_ids,
     })),
     members: members.data!.map((m) => ({ id: m.id, name: m.display_name, colorIndex: m.color_index })),
-    categories: categories.data!.sort((a, b) => a.name.localeCompare(b.name, 'uk')),
+    categories: categories.data!.sort((a, b) => a.name.localeCompare(b.name, i18n.locale)),
   };
 }
 

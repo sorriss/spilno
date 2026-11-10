@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SwUpdate } from '@angular/service-worker';
 import { IonApp, IonRouterOutlet, ToastController } from '@ionic/angular';
 import { filter } from 'rxjs';
-import { uk } from './i18n/uk';
+import { i18n } from './i18n';
 
 @Component({
   selector: 'app-root',
@@ -25,9 +25,9 @@ export class App {
 
   private async offerReload(): Promise<void> {
     const toast = await this.toasts.create({
-      message: uk.update.message,
+      message: i18n.update.message,
       position: 'top',
-      buttons: [{ text: uk.update.reload, handler: () => document.location.reload() }],
+      buttons: [{ text: i18n.update.reload, handler: () => document.location.reload() }],
     });
     await toast.present();
   }
