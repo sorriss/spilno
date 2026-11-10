@@ -1,0 +1,31 @@
+<!doctype html>
+<!--
+  Генератор иконок: рисует логотип на canvas ровно нужного размера и отдаёт PNG в <pre id="out"> как data-URL.
+  Скриншот headless Chrome для этого не годится: при окне меньше ~500px и при масштабе < 1 он рисует страницу шире окна
+  и обрезает картинку. Запуск (Git Bash), затем base64 из вывода сохранить в файл:
+    chrome --headless=new --virtual-time-budget=3000 --dump-dom "file:///<путь>/tools/render-icon.html?size=180&kind=app"
+  kind=app — иконки приложения (public/icons: 512, 192, apple-touch-icon 180); kind=favicon — 32px для public/favicon.ico
+  (ICO из одного PNG: 22 байта заголовка + PNG).
+-->
+<html><body><pre id="out"></pre>
+<script>
+  // ?size=180&kind=app|favicon — рисует логотип на canvas ровно size×size и кладёт PNG (data-URL) в #out.
+  const params = new URLSearchParams(location.search);
+  const size = Number(params.get('size'));
+  const app = params.get('kind') === 'app';
+  // app: фон и логотип 60% ширины по центру (безопасная зона maskable — 80%). favicon: без фона, логотип во всю ширину.
+  const svg = app
+    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#F5F6F8"/>
+         <circle cx="42" cy="50" r="20" fill="#2550d9"/><circle cx="58" cy="50" r="20" fill="#8fa9f5" fill-opacity="0.85"/></svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30">
+         <circle cx="11" cy="15" r="10" fill="#2550d9"/><circle cx="19" cy="15" r="10" fill="#8fa9f5" fill-opacity="0.85"/></svg>`;
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    canvas.getContext('2d').drawImage(img, 0, 0, size, size);
+    document.getElementById('out').textContent = canvas.toDataURL('image/png');
+  };
+  img.src = 'data:image/svg+xml,' + encodeURIComponent(svg);
+</script>
+</body></html>
