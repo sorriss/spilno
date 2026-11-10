@@ -1,7 +1,8 @@
 // Раз в минуту (pg_cron, supabase/cron/mono-sync.sql) забирает выписку mono: по одному запросу на токен.
 // Выкладка: Supabase Dashboard → Edge Functions → mono-sync, вставить этот файл целиком, Verify JWT выключить:
 // функцию вызывает cron без пользователя. Ответ ничего не раскрывает, частоту держит БД (mono_claim_requests).
-// Секреты VAPID_PUBLIC_KEY и VAPID_PRIVATE_KEY общие с функцией notify: ими шлём push о закрытом долге.
+// Секреты VAPID_PUBLIC_KEY и VAPID_PRIVATE_KEY общие с функцией notify: ими шлём push о закрытом долге
+// и об общей трате, которую создало правило при импорте.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
 
@@ -44,10 +45,16 @@ function categoryFor(mcc: number): string | null {
 
 const seconds = (iso: string) => Math.floor(new Date(iso).getTime() / 1000);
 
-interface Closed {
+/** Что вернул mono_import: закрытый долг или общая трата по правилу (по строке на каждого, кого уведомить). */
+interface Event {
+  kind: 'settled' | 'shared';
+  ref_id: string;
   from_member: string;
   to_member: string;
+  /** settled — сумма перевода; shared — доля получателя. */
   amount: number;
+  total: number;
+  label: string | null;
 }
 
 /** «1 248,60 ₴», как в приложении. */
@@ -57,25 +64,34 @@ function money(kopecks: number): string {
   return `${whole}${rest ? `,${String(rest).padStart(2, '0')}` : ''} ₴`;
 }
 
-/** Получателю: перевод по кнопке «Переказати в mono» найден в выписке, долг закрыт. */
-async function notifyClosed(admin: ReturnType<typeof createClient>, closed: Closed): Promise<void> {
+/** Push участнику to_member: долг закрыт переводом, найденным в выписке, или правило сделало трату общей. */
+async function notifyEvent(admin: ReturnType<typeof createClient>, event: Event): Promise<void> {
   const { data: members } = await admin
     .from('family_members')
     .select('id, user_id, display_name')
-    .in('id', [closed.from_member, closed.to_member]);
-  const payer = members?.find((m) => m.id === closed.from_member);
-  const payee = members?.find((m) => m.id === closed.to_member);
+    .in('id', [event.from_member, event.to_member]);
+  const payer = members?.find((m) => m.id === event.from_member);
+  const payee = members?.find((m) => m.id === event.to_member);
   if (!payer || !payee) return;
   const { data: subs } = await admin.from('push_subscriptions').select('endpoint, p256dh, auth').eq('user_id', payee.user_id);
   if (!subs?.length) return;
 
   webpush.setVapidDetails('mailto:hello@spilno.cc', Deno.env.get('VAPID_PUBLIC_KEY')!, Deno.env.get('VAPID_PRIVATE_KEY')!);
+  // Тексты — как у функции notify для ручных трат.
+  const message =
+    event.kind === 'settled'
+      ? { title: `Борг закрито: ${payer.display_name}`, body: `Переказ ${money(event.amount)} знайдено у виписці mono`, url: '/tabs/settle' }
+      : {
+          title: `${payer.display_name}: ${event.label ?? 'Спільна витрата'}`,
+          body: `${money(event.total)} · ваша частка ${money(event.amount)}`,
+          url: `/tabs/transactions/${event.ref_id}`,
+        };
   const payload = JSON.stringify({
     notification: {
-      title: `Борг закрито: ${payer.display_name}`,
-      body: `Переказ ${money(closed.amount)} знайдено у виписці mono`,
+      title: message.title,
+      body: message.body,
       icon: '/icons/icon-192.png',
-      data: { onActionClick: { default: { operation: 'navigateLastFocusedOrOpen', url: '/tabs/settle' } } },
+      data: { onActionClick: { default: { operation: 'navigateLastFocusedOrOpen', url: message.url } } },
     },
   });
   await Promise.all(
@@ -111,7 +127,7 @@ Deno.serve(async () => {
       // mono отдаёт не больше 500 операций за запрос, от новых к старым: остальное окно дочитываем позже.
       const nextPageTo =
         items.length >= 500 ? new Date(Math.min(...items.map((i) => i.time)) * 1000).toISOString() : null;
-      const { data: closed, error } = await admin.rpc('mono_import', {
+      const { data: events, error } = await admin.rpc('mono_import', {
         account: job.account_id,
         items: items.map((i) => ({
           external_id: i.id,
@@ -125,8 +141,8 @@ Deno.serve(async () => {
         next_page_to: nextPageTo,
       });
       if (error) console.error(job.account_id, error);
-      // Push — не часть импорта: если не дошёл, долг всё равно закрыт.
-      await Promise.all(((closed ?? []) as Closed[]).map((c) => notifyClosed(admin, c).catch(console.error)));
+      // Push — не часть импорта: если не дошёл, долг закрыт и трата поделена всё равно.
+      await Promise.all(((events ?? []) as Event[]).map((e) => notifyEvent(admin, e).catch(console.error)));
     }),
   );
   return new Response('ok');

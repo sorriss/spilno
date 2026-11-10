@@ -437,9 +437,9 @@ test('правила спільних делят новые операции с 
     JSON.stringify([{ external_id: 'acc-r', name: 'mono r', currency: 'UAH' }])]);
   const account = (await db.query(`select id from accounts where external_id = 'acc-r'`)).rows[0].id;
   const groceries = (await as(ANDRII, `select id from categories where family_id = $1 and name = 'Продукти'`, [fam]))[0].id;
-  const imp = (list) => asService('select mono_import($1, $2, now(), null)', [account, JSON.stringify(list)]);
+  const imp = (list) => asService('select * from mono_import($1, $2, now(), null)', [account, JSON.stringify(list)]);
   const item = (external_id, amount, extra = {}) => ({
-    external_id, occurred_at: new Date(Date.now() - 3600000).toISOString(), amount, hold: false, comment: 'Магазин', category: null, ...extra,
+    external_id, occurred_at: new Date().toISOString(), amount, hold: false, comment: 'Магазин', category: null, ...extra,
   });
 
   // Импортированное до правил не трогаем.
@@ -452,7 +452,7 @@ test('правила спільних делят новые операции с 
   await assert.rejects(as(SOFIA, 'insert into share_rules (family_id, member_id, merchant) values ($1, $2, $3)', [fam, sofia, 'АТБ']), /row-level security/);
   await assert.rejects(as(OLENA, 'insert into share_rules (family_id, member_id, merchant) values ($1, $2, $3)', [fam, andrii, 'АТБ']), /row-level security/);
 
-  await imp([
+  const pushes = await imp([
     item('r1', -1000, { category: 'Продукти' }), // категория: порівну на всю семью (3), лишняя копейка первому
     item('r2', -1001, { comment: 'СІЛЬПО Київ', category: 'Продукти' }), // магазин точнее категории: только Андрій и Олена
     item('r3', -500, { comment: 'Кіно' }), // не подходит
@@ -464,6 +464,12 @@ test('правила спільних делят новые операции с 
     .map((r) => [r.member_id, Number(r.amount)]);
   const shared = async (ext) => (await as(ANDRII, 'select is_shared from transactions where external_id = $1', [ext]))[0].is_shared;
 
+  // Кого уведомить: все в делении, кроме владельца карты, со своей долей и описанием операции.
+  assert.deepEqual(
+    pushes.filter((p) => p.kind === 'shared').map((p) => [p.to_member, Number(p.amount), Number(p.total), p.label]).sort(),
+    [[olena, 333, 1000, 'Магазин'], [olena, 500, 1001, 'СІЛЬПО Київ'], [sofia, 333, 1000, 'Магазин']].sort(),
+  );
+  assert.ok(pushes.every((p) => p.from_member === andrii));
   assert.equal(await shared('r0'), false);
   assert.deepEqual((await shares('r1')).map(([, a]) => a), [334, 333, 333]);
   assert.deepEqual(await shares('r2'), [[andrii, 501], [olena, 500]].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])));
@@ -471,6 +477,10 @@ test('правила спільних делят новые операции с 
   assert.equal(await shared('r4'), false);
   assert.equal(await shared('r5'), false);
   assert.equal((await as(OLENA, `select 1 from transactions where external_id = 'r1'`)).length, 1); // общая видна семье
+
+  // История, догруженная после создания правила, правилом не делится.
+  await imp([item('r6', -600, { category: 'Продукти', occurred_at: new Date(Date.now() - 30 * 24 * 3600000).toISOString() })]);
+  assert.equal(await shared('r6'), false);
 
   // Холд стал окончательным с другой суммой: делится уже она. Повтор не делит второй раз.
   await imp([item('r5', -900, { category: 'Продукти' })]);
