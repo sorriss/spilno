@@ -11,6 +11,12 @@ import { uk } from '../i18n/uk';
 
 export const nameOf = (member: Member): string => (member.isMe ? uk.you : member.name);
 
+/** Иконки категорий из create_family: новую категорию с другой иконкой регистрировать здесь же. */
+export const CATEGORY_ICONS = {
+  airplaneOutline, bedOutline, busOutline, cafeOutline, cardOutline, carOutline, cartOutline, filmOutline,
+  giftOutline, happyOutline, homeOutline, medkitOutline, pricetagOutline, shirtOutline, swapHorizontalOutline,
+};
+
 /** Строка операции: иконка, название, кто платил и как делили, сумма. */
 @Component({
   selector: 'app-tx-row',
@@ -126,11 +132,7 @@ export class TxRow {
   });
 
   constructor() {
-    // Иконки категорий из create_family: новую категорию с другой иконкой регистрировать здесь же.
-    addIcons({
-      airplaneOutline, bedOutline, busOutline, cafeOutline, cardOutline, carOutline, cartOutline, filmOutline,
-      giftOutline, happyOutline, homeOutline, medkitOutline, pricetagOutline, shirtOutline, swapHorizontalOutline,
-    });
+    addIcons(CATEGORY_ICONS);
   }
 
   private splitLabel(tx: Tx): string {

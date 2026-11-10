@@ -34,7 +34,10 @@
       @let o = overview.value();
 
       <section class="card spent">
-        <h2 class="caption">{{ t.overview.sharedExpenses }}</h2>
+        <div class="caption-row">
+          <h2 class="caption">{{ t.overview.sharedExpenses }}</h2>
+          <a class="link" routerLink="/tabs/overview/analytics">{{ t.overview.analytics }}</a>
+        </div>
         <p class="total">
           {{ formatAmount(o.sharedTotal, { trimZero: true }) }} <span class="currency">{{ t.currency }}</span>
         </p>

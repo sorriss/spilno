@@ -12,6 +12,7 @@
 | `/new` | Нова витрата (без таб-бара) | auth, family | **готов** |
 | `/edit/:id` | Редагувати операцію: та же форма, что `/new` | auth, family | **готов** |
 | `/tabs/overview` | Огляд | auth, family | **готов** |
+| `/tabs/overview/analytics` | Аналітика: Сім’я / Мої, категории за месяц, 6 месяцев | auth, family | **готов** |
 | `/tabs/transactions` | Операції | auth, family | **готов**, без поиска и фильтров по категории |
 | `/tabs/transactions/:id` | Деталі операції | auth, family | **готов**: просмотр, правка и удаление |
 | `/tabs/settle` | Розрахунки | auth, family | **готов**, без «Нагадати» |
@@ -24,7 +25,7 @@
 | `/tabs/more/accounts`, `/categories` | Рахунки, Категорії | auth, family | **готов** |
 | `/tabs/more/settings` | Налаштування | auth, family | заглушка, ссылки на неё нет |
 
-Этап 2: `/analytics` добавим вместе с экраном. Отдельного `/review` нет, см. «Монобанк» в `docs/decisions.md`.
+Отдельного `/review` нет, см. «Монобанк» в `docs/decisions.md`.
 
 Edge Functions лежат в `supabase/functions/<имя>/index.ts`, выкладываются вручную через Supabase Dashboard. `mono-connect` проверяет токен через client-info и сохраняет его в Vault. `mono-sync` раз в минуту по pg_cron забирает выписку; расписание — `supabase/cron/mono-sync.sql`, выполняется один раз вручную.
 

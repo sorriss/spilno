@@ -486,6 +486,53 @@ test('правила спільних делят новые операции с 
   await db.exec(`delete from transactions where account_id = '${account}'; delete from accounts where id = '${account}'`);
 });
 
+test('аналитика: Сім’я — общие траты, Мої — личные, моя доля и переводы отдельно', async () => {
+  const cat = async (name) => (await as(ANDRII, 'select id from categories where family_id = $1 and name = $2', [fam, name]))[0].id;
+  const [groceries, cafe] = [await cat('Продукти'), await cat('Кафе')];
+  const now = new Date();
+  const from = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  const to = new Date(now.getFullYear(), now.getMonth() + 2, 1).toISOString().slice(0, 10);
+  // Суммы как словарь «вид:категория → копейки»; в базе есть операции других тестов, поэтому сравниваем приращение.
+  const report = async (user, mine) => Object.fromEntries(
+    (await as(user, 'select category_id, kind, amount from analytics($1, $2, $3, $4)', [fam, mine, from, to]))
+      .map((r) => [`${r.kind}:${r.category_id}`, Number(r.amount)]));
+  const cases = [[ANDRII, false], [SOFIA, false], [ANDRII, true], [OLENA, true], [STRANGER, false]];
+  // Последовательно: as() переключает пользователя на общем соединении, параллельные вызовы перемешались бы.
+  const snapshot = async () => {
+    const out = [];
+    for (const [u, m] of cases) out.push(await report(u, m));
+    return out;
+  };
+  const before = await snapshot();
+
+  const add = (user, type, amount, category, paidBy, to, mode, shares) =>
+    as(user, 'select add_transaction($1, $2, $3, now(), null, $4, $5, $6, $7, $8) as id',
+      [fam, type, amount, category, paidBy, to, mode, JSON.stringify(shares)]);
+  const half = [{ member_id: andrii, amount: 500, weight: null }, { member_id: olena, amount: 500, weight: null }];
+  const ids = [
+    await add(ANDRII, 'expense', -1000, groceries, andrii, null, 'equal', half),
+    await add(ANDRII, 'expense', -300, cafe, andrii, null, null, []),
+    await add(OLENA, 'expense', -700, null, olena, null, null, []),
+    await add(ANDRII, 'transfer', -2000, null, andrii, olena, null, []),
+    await add(ANDRII, 'income', 9000, null, andrii, null, null, []),
+    await add(ANDRII, 'expense', -1000, groceries, andrii, null, 'equal', half), // станет холдом
+  ].map(([r]) => r.id);
+  await db.exec(`update transactions set is_hold = true where id = '${ids.at(-1)}'`);
+
+  const after = await snapshot();
+  const delta = after.map((a, i) => Object.fromEntries(
+    Object.entries(a).map(([k, v]) => [k, v - (before[i][k] ?? 0)]).filter(([, v]) => v !== 0)));
+  assert.deepEqual(delta, [
+    { [`expense:${groceries}`]: 1000 },
+    { [`expense:${groceries}`]: 1000 },
+    { [`expense:${groceries}`]: 500, [`expense:${cafe}`]: 300, 'transfer:null': 2000 },
+    { [`expense:${groceries}`]: 500, 'expense:null': 700 },
+    {},
+  ]);
+
+  for (const id of ids) await db.exec(`delete from transactions where id = '${id}'`);
+});
+
 test('rename_me меняет только своё имя и не даёт повысить роль', async () => {
   await as(OLENA, `select rename_me($1, ' Оленка ')`, [fam]);
   const rows = await as(ANDRII, 'select id, display_name, role from family_members where family_id = $1', [fam]);

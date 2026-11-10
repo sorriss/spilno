@@ -49,29 +49,6 @@ a {
   line-height: 18px;
 }
 
-.month {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 15px;
-  font-weight: 700;
-
-  button {
-    width: 44px;
-    height: 44px;
-    border: 0;
-    background: none;
-    color: var(--sp-text-secondary);
-    font-size: 20px;
-    cursor: pointer;
-
-    &:disabled {
-      opacity: 0.3;
-      cursor: default;
-    }
-  }
-}
-
 .card {
   background: var(--sp-surface);
   border-radius: var(--sp-radius-card);
@@ -99,8 +76,25 @@ a {
   color: var(--sp-text-secondary);
 }
 
-.spent .caption {
-  margin-bottom: -10px;
+.caption-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding-left: var(--sp-space-4);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ion-color-primary);
+  }
+}
+
+.spent .caption-row {
+  /* Ссылке нужна высота 44px, а строка должна стоять как прежняя подпись в 18px. */
+  margin: -13px 0 -23px;
 }
 
 .total {
