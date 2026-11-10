@@ -385,6 +385,52 @@ test('монобанк: импорт выписки окнами, без дуб�
   await db.exec(`delete from transactions where account_id = '${account}'; delete from accounts where id = '${account}'`);
 });
 
+test('монобанк: перевод между участниками становится одним внутренним переводом', async () => {
+  const connect = (member, ext) => asService('select mono_save_connection($1, $2, $3, $4)', [member, `token-${ext}`, ext,
+    JSON.stringify([{ external_id: ext, name: `mono ${ext}`, currency: 'UAH' }])]);
+  await connect(andrii, 'acc-a');
+  await connect(olena, 'acc-o');
+  const accountOf = async (ext) => (await db.query('select id from accounts where external_id = $1', [ext])).rows[0].id;
+  const [accA, accO] = [await accountOf('acc-a'), await accountOf('acc-o')];
+  const t0 = Date.now() - 2 * 24 * 3600 * 1000;
+  const at = (seconds) => new Date(t0 + seconds * 1000).toISOString();
+  const imp = (account, list) => asService('select mono_import($1, $2, now(), null)', [account, JSON.stringify(list)]);
+  const item = (external_id, seconds, amount) => ({ external_id, occurred_at: at(seconds), amount, hold: false, comment: 'Переказ', category: null });
+
+  // Андрій переводит Олені 500 ₴, её сторона приходит позже, на 20 секунд позже по времени.
+  // Тут же: та же сумма через 10 минут (не пара) и расход Андрія без встречной операции.
+  await imp(accA, [item('a1', 0, -50000), item('a2', 600, -50000), item('a3', 30, -7000)]);
+  await imp(accO, [item('o1', 20, 50000), item('o2', 1300, 7000)]);
+
+  const rows = await as(SOFIA, `select external_id, type, amount_base, paid_by_member_id, to_member_id, is_internal_transfer
+    from transactions where account_id in ($1, $2) order by external_id`, [accA, accO]);
+  assert.deepEqual(rows.map((r) => [r.external_id, r.type, r.is_internal_transfer]), [['a1', 'transfer', true]]);
+  assert.equal(rows[0].paid_by_member_id, andrii);
+  assert.equal(rows[0].to_member_id, olena);
+  assert.equal(Number(rows[0].amount_base), -50000);
+  // Остальное — личные операции авторов.
+  assert.deepEqual((await as(ANDRII, `select external_id, type from transactions where account_id = $1 and type <> 'transfer' order by external_id`, [accA]))
+    .map((r) => [r.external_id, r.type]), [['a2', 'expense'], ['a3', 'expense']]);
+  assert.deepEqual((await as(OLENA, `select external_id from transactions where account_id = $1`, [accO])).map((r) => r.external_id), ['o2']);
+
+  // Повторный опрос не возвращает сторону получателя и не ломает перевод.
+  await imp(accO, [item('o1', 20, 50000)]);
+  await imp(accA, [item('a1', 0, -50000)]);
+  assert.equal((await as(OLENA, `select 1 from transactions where external_id = 'o1'`)).length, 0);
+  assert.equal((await as(SOFIA, `select type from transactions where external_id = 'a1'`))[0].type, 'transfer');
+
+  // В баланс перевод не входит.
+  const balances = await as(ANDRII, 'select balance from member_balances where member_id in ($1, $2)', [andrii, olena]);
+  const before = balances.map((b) => Number(b.balance));
+  await as(ANDRII, `delete from transactions where external_id = 'a1'`);
+  const after = (await as(ANDRII, 'select balance from member_balances where member_id in ($1, $2)', [andrii, olena])).map((b) => Number(b.balance));
+  assert.deepEqual(after, before);
+
+  await as(ANDRII, 'select disconnect_mono($1)', [fam]);
+  await as(OLENA, 'select disconnect_mono($1)', [fam]);
+  await db.exec(`delete from transactions where account_id in ('${accA}', '${accO}'); delete from accounts where id in ('${accA}', '${accO}')`);
+});
+
 test('rename_me меняет только своё имя и не даёт повысить роль', async () => {
   await as(OLENA, `select rename_me($1, ' Оленка ')`, [fam]);
   const rows = await as(ANDRII, 'select id, display_name, role from family_members where family_id = $1', [fam]);
