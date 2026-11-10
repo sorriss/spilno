@@ -17,7 +17,7 @@ export const appConfig: ApplicationConfig = {
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     // Один внешний вид на всех платформах: дизайн общий, а не по гайдлайнам iOS и Android.
     provideIonicAngular({ mode: 'ios' }),
-    // Новая версия приложения подхватывается при следующем открытии.
+    // Новую версию предлагает плашка «Оновити» в App.
     provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode(), registrationStrategy: 'registerWhenStable:30000' }),
   ],
 };

@@ -320,6 +320,10 @@ export const uk = {
     shares: 'частками',
     amounts: 'сумами',
   },
+  update: {
+    message: 'Доступна нова версія Spilno',
+    reload: 'Оновити',
+  },
   pages: {
     settings: 'Налаштування',
     placeholder: 'Цей екран ще в роботі',
