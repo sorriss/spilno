@@ -10,10 +10,10 @@
 | `/privacy` | Умови та конфіденційність | все | **готов** |
 | `/family-setup` | Створити / приєднатися | auth | **готов** |
 | `/new` | Нова витрата (без таб-бара) | auth, family | **готов** |
+| `/edit/:id` | Редагувати операцію: та же форма, что `/new` | auth, family | **готов** |
 | `/tabs/overview` | Огляд | auth, family | **готов** |
 | `/tabs/transactions` | Операції | auth, family | **готов**, без поиска и фильтров по категории |
-| `/tabs/transactions/:id` | Деталі операції | auth, family | **готов**: просмотр и удаление, правки пока нет |
-| `/tabs/transactions/:id/split` | Редагувати поділ | auth, family | заглушка |
+| `/tabs/transactions/:id` | Деталі операції | auth, family | **готов**: просмотр, правка и удаление |
 | `/tabs/settle` | Розрахунки | auth, family | **готов**, без «Нагадати» |
 | `/tabs/settle/history` | Історія | auth, family | **готов** |
 | `/tabs/more` | Ще | auth, family | **готов**, без монобанка и настроек устройства |

@@ -7,8 +7,8 @@ export interface TxDetails {
   /** null: без счёта или чужой счёт, скрытый от семьи. */
   accountName: string | null;
   shares: { member: Member; amount: number; weight: number | null }[];
-  /** Совпадает с RLS: владелец или автор-участник. Сервер проверит всё равно. */
-  canDelete: boolean;
+  /** Править и удалять: совпадает с RLS, владелец или автор-участник. Сервер проверит всё равно. */
+  canEdit: boolean;
 }
 
 type DetailsRow = TxRow & {
@@ -39,7 +39,7 @@ export async function loadDetails(id: string): Promise<TxDetails | null> {
     shares: shares
       .map((s) => ({ member: toMember(members, me.id, s.member_id), amount: s.amount, weight: s.weight }))
       .sort((a, b) => b.amount - a.amount),
-    canDelete: me.role === 'owner' || (me.role === 'member' && created_by_member_id === me.id),
+    canEdit: me.role === 'owner' || (me.role === 'member' && created_by_member_id === me.id),
   };
 }
 

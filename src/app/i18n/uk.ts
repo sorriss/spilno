@@ -197,6 +197,8 @@ export const uk = {
   },
   newExpense: {
     title: 'Нова витрата',
+    editTitle: 'Редагувати операцію',
+    notFound: 'Операції немає: її видалили або вона вам недоступна.',
     close: 'Закрити',
     typeLabel: 'Тип операції',
     types: { expense: 'Витрата', income: 'Дохід', transfer: 'Переказ' },
@@ -248,6 +250,7 @@ export const uk = {
     split: 'Поділ',
     notFound: 'Операції немає: її видалили або вона вам недоступна.',
     loadError: 'Не вдалося завантажити дані',
+    edit: 'Редагувати',
     delete: 'Видалити',
     cancel: 'Скасувати',
     deleteTitle: 'Видалити операцію?',
@@ -318,7 +321,6 @@ export const uk = {
     amounts: 'сумами',
   },
   pages: {
-    editSplit: 'Редагувати поділ',
     settings: 'Налаштування',
     placeholder: 'Цей екран ще в роботі',
   },

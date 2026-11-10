@@ -1,4 +1,4 @@
-import { Component, computed, inject, resource, signal } from '@angular/core';
+import { Component, computed, inject, input, resource, signal } from '@angular/core';
 import {
   IonButton, IonContent, IonFooter, IonIcon, IonSpinner, NavController,
 } from '@ionic/angular';
@@ -7,12 +7,15 @@ import { close } from 'ionicons/icons';
 import { formatMoney, parseKopecks } from '../../core/money';
 import { uk } from '../../i18n/uk';
 import {
-  computeShares, loadNewExpense, NewExpenseData, saveTransaction, ShareRow, SplitMode, TxType,
+  computeShares, EditTx, loadNewExpense, NewExpenseData, saveTransaction, ShareRow, SplitMode, TxType,
 } from './new-expense.data';
 
 /** Дата в локальном поясе: toISOString дал бы вчерашний день после полуночи по Киеву. */
 function today(): string {
-  const d = new Date();
+  return localDate(new Date());
+}
+
+function localDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
@@ -25,9 +28,19 @@ function today(): string {
 export class NewExpensePage {
   private readonly nav = inject(NavController);
 
+  /** Из маршрута /edit/:id; без него форма создаёт новую операцию. */
+  readonly id = input<string>();
+
   protected readonly t = uk;
   protected readonly s = uk.newExpense;
-  protected readonly data = resource({ loader: loadNewExpense });
+  protected readonly data = resource({
+    params: () => ({ id: this.id() }),
+    loader: async ({ params }) => {
+      const d = await loadNewExpense(params.id);
+      if (d?.editing) this.prefill(d.editing, d.members);
+      return d;
+    },
+  });
   protected readonly types: TxType[] = ['expense', 'income', 'transfer'];
   protected readonly modes: SplitMode[] = ['equal', 'shares', 'amounts'];
   protected readonly maxDate = today();
@@ -51,6 +64,7 @@ export class NewExpensePage {
   protected readonly error = computed(() => (this.tried() ? this.validate() : '') || this.saveError());
 
   private readonly loaded = computed(() => (this.data.hasValue() ? this.data.value() : null));
+  protected readonly editing = computed(() => !!this.id());
   protected readonly multiple = computed(() => (this.loaded()?.members.length ?? 0) > 1);
   protected readonly shared = computed(() => this.type() === 'expense' && (this.sharedChoice() ?? this.multiple()));
   protected readonly categories = computed(() => {
@@ -59,7 +73,7 @@ export class NewExpensePage {
   });
   protected readonly recipients = computed(() => {
     const d = this.loaded();
-    return d?.members.filter((m) => m.id !== d.meId) ?? [];
+    return d?.members.filter((m) => m.id !== d.authorId) ?? [];
   });
   protected readonly amount = computed(() => parseKopecks(this.amountText()) ?? 0);
   protected readonly rows = computed<ShareRow[]>(() =>
@@ -83,6 +97,29 @@ export class NewExpensePage {
 
   constructor() {
     addIcons({ close });
+  }
+
+  /** Форма правки начинает с того, что сохранено: включены только участники с долями. */
+  private prefill(tx: EditTx, members: NewExpenseData['members']): void {
+    this.type.set(tx.type);
+    this.amountText.set(formatMoney(tx.amount));
+    this.categoryId.set(tx.categoryId ?? '');
+    this.accountId.set(tx.accountId ?? '');
+    this.date.set(localDate(new Date(tx.occurredAt)));
+    this.comment.set(tx.comment ?? '');
+    this.payer.set(tx.paidBy);
+    this.toMember.set(tx.toMember);
+    this.sharedChoice.set(tx.mode !== null);
+    this.mode.set(tx.mode ?? 'equal');
+    const shares = new Map(tx.shares.map((s) => [s.memberId, s]));
+    this.edits.set(
+      Object.fromEntries(
+        members.map((m) => {
+          const share = shares.get(m.id);
+          return [m.id, { on: !tx.mode || !!share, weight: String(share?.weight ?? 1), amount: share ? formatMoney(share.amount) : '' }];
+        }),
+      ),
+    );
   }
 
   protected shareOf(memberId: string): number | null {
@@ -134,25 +171,33 @@ export class NewExpensePage {
 
     const shared = this.shared();
     const [y, m, day] = this.date().split('-').map(Number);
+    const original = d.editing;
+    const payer = shared ? (this.payer() ?? d.authorId) : d.authorId;
     this.busy.set(true);
     try {
       await saveTransaction({
+        id: original?.id ?? null,
         familyId: d.familyId,
         type: this.type(),
         amount: this.amount(),
-        // Сегодняшняя операция встаёт в списке сверху, у прошлой даты время не важно.
-        occurredAt: this.date() === today() ? new Date() : new Date(y, m - 1, day, 12),
+        // Сегодняшняя операция встаёт в списке сверху, у прошлой даты время не важно. При правке без смены даты время прежнее.
+        occurredAt:
+          original && this.date() === localDate(new Date(original.occurredAt))
+            ? new Date(original.occurredAt)
+            : this.date() === today() ? new Date() : new Date(y, m - 1, day, 12),
         comment: this.comment().trim() || null,
         categoryId: this.type() === 'transfer' ? null : this.categoryId() || null,
         // Счёт только свой: если платил другой участник, наш счёт тут ни при чём.
-        accountId: shared && (this.payer() ?? d.meId) !== d.meId ? null : this.accountId() || null,
+        // Владелец, правя чужую операцию, счетов автора не видит, и счёт остаётся прежним.
+        accountId:
+          d.authorId !== d.meId ? (original?.accountId ?? null) : payer !== d.meId ? null : this.accountId() || null,
         // Личную операцию и перевод схема записывает только на самого автора.
-        paidBy: shared ? (this.payer() ?? d.meId) : d.meId,
+        paidBy: payer,
         toMember: this.type() === 'transfer' ? this.toMember() : null,
         mode: shared ? this.mode() : null,
         shares: shared ? this.shares()! : [],
       });
-      await this.nav.navigateBack('/tabs/overview');
+      await this.closePage();
     } catch {
       this.saveError.set(this.s.errorSave);
     } finally {
@@ -160,7 +205,8 @@ export class NewExpensePage {
     }
   }
 
-  protected closePage(): void {
-    this.nav.navigateBack('/tabs/overview');
+  protected closePage(): Promise<boolean> {
+    const id = this.id();
+    return this.nav.navigateBack(id ? `/tabs/transactions/${id}` : '/tabs/overview');
   }
 }

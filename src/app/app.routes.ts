@@ -40,6 +40,11 @@ export const routes: Routes = [
     canActivate: [authGuard, familyGuard],
     loadComponent: () => import('./pages/new-expense/new-expense.page').then((m) => m.NewExpensePage),
   },
+  {
+    path: 'edit/:id',
+    canActivate: [authGuard, familyGuard],
+    loadComponent: () => import('./pages/new-expense/new-expense.page').then((m) => m.NewExpensePage),
+  },
 
   {
     path: 'tabs',
@@ -60,7 +65,6 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/transaction-details/transaction-details.page').then((m) => m.TransactionDetailsPage),
       },
-      stub('transactions/:id/split', uk.pages.editSplit, '/tabs/transactions'),
       {
         path: 'settle',
         loadComponent: () => import('./pages/settle/settle.page').then((m) => m.SettlePage),

@@ -3,6 +3,7 @@ import {
   AlertController, IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonSpinner, IonTitle, IonToolbar,
   NavController,
 } from '@ionic/angular';
+import { RouterLink } from '@angular/router';
 import { formatMoney } from '../../core/money';
 import { uk } from '../../i18n/uk';
 import { nameOf, TxRow } from '../../shell/tx-row';
@@ -10,7 +11,7 @@ import { deleteTransaction, loadDetails } from './transaction-details.data';
 
 @Component({
   selector: 'app-transaction-details',
-  imports: [IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent, IonSpinner, IonButton, TxRow],
+  imports: [IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent, IonSpinner, IonButton, TxRow, RouterLink],
   template: `
     <ion-header>
       <ion-toolbar>
@@ -64,7 +65,8 @@ import { deleteTransaction, loadDetails } from './transaction-details.data';
             @if (error()) {
               <p class="form-error" role="alert">{{ error() }}</p>
             }
-            @if (d.canDelete) {
+            @if (d.canEdit) {
+              <a class="cta" [routerLink]="['/edit', d.tx.id]">{{ s.edit }}</a>
               <button type="button" class="delete" [disabled]="busy()" (click)="confirmDelete()">{{ s.delete }}</button>
             }
           } @else {
@@ -195,6 +197,11 @@ export class TransactionDetailsPage {
   protected readonly details = resource({ params: () => this.id(), loader: ({ params }) => loadDetails(params) });
   protected readonly busy = signal(false);
   protected readonly error = signal('');
+
+  /** Страница живёт в стеке Ionic: после правки данные изменились. */
+  ionViewWillEnter(): void {
+    this.details.reload();
+  }
 
   protected money(kopecks: number): string {
     return formatMoney(kopecks);

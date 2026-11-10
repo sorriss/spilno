@@ -247,6 +247,35 @@ test('удалить общую операцию могут автор и вла
   await as(ANDRII, 'delete from transactions where id = $1', [id]);
 });
 
+const updateTx = (user, id, { amount, paidBy, mode = null, shares = [] }) =>
+  as(user, 'select update_transaction($1, $2, $3, now(), null, null, $4, null, $5, $6, null)',
+    [id, 'expense', amount, paidBy, mode, JSON.stringify(shares)]);
+
+test('update_transaction меняет сумму и доли, автор остаётся прежним', async () => {
+  const half = (n) => [{ member_id: andrii, amount: n, weight: null }, { member_id: olena, amount: n, weight: null }];
+  const [{ id }] = await addTx(OLENA, { paidBy: olena, mode: 'equal', shares: half(500) });
+
+  await updateTx(ANDRII, id, { amount: -1500, paidBy: andrii, mode: 'equal', shares: half(750) });
+  const [tx] = await as(OLENA, 'select amount_base, created_by_member_id, paid_by_member_id from transactions where id = $1', [id]);
+  assert.equal(Number(tx.amount_base), -1500);
+  assert.equal(tx.created_by_member_id, olena);
+  assert.equal(tx.paid_by_member_id, andrii);
+  const shares = await as(OLENA, 'select amount from transaction_shares where transaction_id = $1', [id]);
+  assert.deepEqual(shares.map((r) => Number(r.amount)), [750, 750]);
+
+  // Доли не сходятся: откатывается всё, в том числе новая сумма.
+  await assert.rejects(updateTx(OLENA, id, { amount: -2000, paidBy: olena, mode: 'equal', shares: half(750) }), /does not match/);
+  assert.equal(Number((await as(OLENA, 'select amount_base from transactions where id = $1', [id]))[0].amount_base), -1500);
+
+  // Общую в личную: доли уходят, платит только автор.
+  await assert.rejects(updateTx(OLENA, id, { amount: -1500, paidBy: andrii }));
+  await updateTx(OLENA, id, { amount: -1500, paidBy: olena });
+  assert.equal((await as(OLENA, 'select 1 from transaction_shares where transaction_id = $1', [id])).length, 0);
+
+  await assert.rejects(updateTx(SOFIA, id, { amount: -1500, paidBy: olena }), /transaction not found/);
+  await as(OLENA, 'delete from transactions where id = $1', [id]);
+});
+
 test('rename_me меняет только своё имя и не даёт повысить роль', async () => {
   await as(OLENA, `select rename_me($1, ' Оленка ')`, [fam]);
   const rows = await as(ANDRII, 'select id, display_name, role from family_members where family_id = $1', [fam]);

@@ -4,12 +4,14 @@
       <button type="button" class="round-button" [attr.aria-label]="s.close" (click)="closePage()">
         <ion-icon name="close" aria-hidden="true" />
       </button>
-      <h1>{{ s.title }}</h1>
+      <h1>{{ editing() ? s.editTitle : s.title }}</h1>
     </div>
 
     @if (data.hasValue()) {
       @let d = data.value();
-      @if (d.role === 'viewer') {
+      @if (!d) {
+        <p class="form-error">{{ s.notFound }}</p>
+      } @else if (d.role === 'viewer') {
         <p class="form-error">{{ s.viewerOnly }}</p>
       } @else {
         <div class="segment" role="group" [attr.aria-label]="s.typeLabel">
@@ -43,7 +45,7 @@
               </select>
             </label>
           }
-          @if (d.accounts.length && (!shared() || (payer() ?? d.meId) === d.meId)) {
+          @if (d.accounts.length && (!shared() || (payer() ?? d.authorId) === d.meId)) {
             <label class="tile">
               <span>{{ s.account }}</span>
               <select [value]="accountId()" (change)="accountId.set($any($event.target).value)">
@@ -104,7 +106,7 @@
                 <button
                   type="button"
                   class="chip"
-                  [attr.aria-pressed]="(payer() ?? d.meId) === m.id"
+                  [attr.aria-pressed]="(payer() ?? d.authorId) === m.id"
                   (click)="payer.set(m.id)"
                 >
                   <span class="avatar tone-{{ m.colorIndex }}" aria-hidden="true">{{ m.name[0] }}</span>
@@ -170,11 +172,11 @@
   </main>
 </ion-content>
 
-@if (data.hasValue() && data.value().role !== 'viewer') {
+@if (data.hasValue() && data.value() && data.value()!.role !== 'viewer') {
   <ion-footer>
     @if (error()) {
       <p class="form-error" role="alert">{{ error() }}</p>
     }
-    <button type="button" class="cta" [disabled]="busy()" (click)="save(data.value())">{{ s.save }}</button>
+    <button type="button" class="cta" [disabled]="busy()" (click)="save(data.value()!)">{{ s.save }}</button>
   </ion-footer>
 }
