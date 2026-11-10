@@ -108,12 +108,15 @@ export class TxRow {
   protected readonly title = computed(() => {
     const tx = this.tx();
     if (tx.type === 'transfer') return tx.to ? `${nameOf(tx.paidBy)} → ${nameOf(tx.to)}` : this.t.transfer;
-    return tx.categories?.name ?? tx.comment ?? (tx.type === 'income' ? this.t.incomeTitle : this.t.expense);
+    // Комментарий конкретнее категории: у операций из mono это название магазина, категорию и так видно по иконке.
+    return tx.comment ?? tx.categories?.name ?? (tx.type === 'income' ? this.t.incomeTitle : this.t.expense);
   });
 
   protected readonly subtitle = computed(() => {
     const tx = this.tx();
-    return tx.is_internal_transfer ? this.t.internalTransfer : `${nameOf(tx.paidBy)} · ${this.splitLabel(tx)}`;
+    if (tx.is_internal_transfer) return this.t.internalTransfer;
+    const category = tx.comment && tx.categories ? `${tx.categories.name} · ` : '';
+    return `${category}${nameOf(tx.paidBy)} · ${this.splitLabel(tx)}`;
   });
 
   protected readonly amount = computed(() => {
