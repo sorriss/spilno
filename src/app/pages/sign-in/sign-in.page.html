@@ -40,6 +40,11 @@
       </form>
     } @else {
       <form class="form" (submit)="$event.preventDefault(); send()">
+        <button type="button" class="oauth" [disabled]="busy()" (click)="oauth('google')">
+          <ion-icon name="logo-google" aria-hidden="true" />{{ t.signIn.withGoogle }}
+        </button>
+        <!-- Apple: вернуть кнопку oauth('apple') с logo-apple, когда провайдер настроен в Supabase. -->
+        <p class="or">{{ t.signIn.orEmail }}</p>
         <label for="email">{{ t.signIn.emailLabel }}</label>
         <input
           #emailInput

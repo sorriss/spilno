@@ -2,10 +2,10 @@ import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { IonContent, IonIcon, NavController } from '@ionic/angular';
 import { RouterLink } from '@angular/router';
 import { addIcons } from 'ionicons';
-import { chevronBack } from 'ionicons/icons';
+import { chevronBack, logoGoogle } from 'ionicons/icons';
 import { i18n } from '../../i18n';
 import { Logo } from '../../shell/logo';
-import { sendCode, signInErrorMessage, verifyCode } from './sign-in.data';
+import { sendCode, signInErrorMessage, signInWith, verifyCode } from './sign-in.data';
 
 const RESEND_SECONDS = 45;
 
@@ -17,6 +17,14 @@ const RESEND_SECONDS = 45;
     app-logo { width: 52px; }
     .terms { font-size: 12px; line-height: 16px; color: var(--sp-text-secondary); text-align: center; }
     .terms a { color: var(--ion-color-primary); }
+    .oauth {
+      display: flex; align-items: center; justify-content: center; gap: var(--sp-space-2);
+      height: 52px; border: 1.5px solid var(--sp-input-line); border-radius: var(--sp-radius-cta);
+      background: var(--sp-surface); color: var(--sp-text);
+      font: inherit; font-size: 16px; font-weight: 800; cursor: pointer;
+    }
+    .oauth ion-icon { font-size: 20px; }
+    .or { margin: 0; font-size: 13px; color: var(--sp-text-secondary); text-align: center; }
   `,
 })
 export class SignInPage implements OnDestroy {
@@ -31,7 +39,7 @@ export class SignInPage implements OnDestroy {
   protected readonly resendIn = signal(0);
 
   constructor() {
-    addIcons({ chevronBack });
+    addIcons({ chevronBack, logoGoogle });
   }
 
   ngOnDestroy(): void {
@@ -49,6 +57,10 @@ export class SignInPage implements OnDestroy {
       this.codeSent.set(true);
       this.startResendTimer();
     }
+  }
+
+  protected oauth(provider: 'google' | 'apple'): void {
+    this.attempt(() => signInWith(provider));
   }
 
   protected async verify(form: HTMLFormElement): Promise<void> {

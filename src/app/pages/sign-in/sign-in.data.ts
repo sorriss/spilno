@@ -11,6 +11,15 @@ export async function verifyCode(email: string, token: string): Promise<void> {
   if (error) throw error;
 }
 
+/** Уходит со страницы на провайдера; вернётся на /tabs/overview, сессию из URL подхватит supabase-js. */
+export async function signInWith(provider: 'google' | 'apple'): Promise<void> {
+  const { error } = await supabase!.auth.signInWithOAuth({
+    provider,
+    options: { redirectTo: `${location.origin}/tabs/overview` },
+  });
+  if (error) throw error;
+}
+
 export function signInErrorMessage(error: unknown): string {
   const { code, status } = error as { code?: string; status?: number };
   if (status === 429) return i18n.signIn.errorRateLimit;

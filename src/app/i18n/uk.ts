@@ -55,6 +55,9 @@ export const uk = {
     splitAmounts: 'Сумами',
   },
   signIn: {
+    withGoogle: 'Увійти через Google',
+    withApple: 'Увійти через Apple',
+    orEmail: 'або кодом на email',
     title: 'Увійдіть у Spilno',
     subtitle: 'Без паролів: надішлемо одноразовий код на email.',
     emailLabel: 'Email',
@@ -86,7 +89,7 @@ export const uk = {
       },
       {
         heading: 'Де зберігаються дані',
-        text: 'У базі даних Supabase. Листи з кодом входу надсилає поштовий сервіс Resend, шрифти завантажуються з Google Fonts.',
+        text: 'У базі даних Supabase. Листи з кодом входу надсилає поштовий сервіс Resend, шрифти завантажуються з Google Fonts. Якщо входите через Google чи Apple, ми отримуємо від них лише email та ім’я.',
       },
       {
         heading: 'Видалення',

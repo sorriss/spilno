@@ -53,6 +53,9 @@ export const en: Strings = {
     splitAmounts: 'By amounts',
   },
   signIn: {
+    withGoogle: 'Continue with Google',
+    withApple: 'Continue with Apple',
+    orEmail: 'or with an email code',
     title: 'Sign in to Spilno',
     subtitle: 'No passwords: we’ll email you a one-time code.',
     emailLabel: 'Email',
@@ -84,7 +87,7 @@ export const en: Strings = {
       },
       {
         heading: 'Where data is stored',
-        text: 'In a Supabase database. Sign-in codes are emailed by Resend, and fonts are loaded from Google Fonts.',
+        text: 'In a Supabase database. Sign-in codes are emailed by Resend, and fonts are loaded from Google Fonts. If you sign in with Google or Apple, we only receive your email and name from them.',
       },
       {
         heading: 'Deletion',

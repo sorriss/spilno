@@ -53,6 +53,9 @@ export const pl: Strings = {
     splitAmounts: 'Kwotami',
   },
   signIn: {
+    withGoogle: 'Zaloguj się przez Google',
+    withApple: 'Zaloguj się przez Apple',
+    orEmail: 'lub kodem na e-mail',
     title: 'Zaloguj się do Spilno',
     subtitle: 'Bez haseł: wyślemy jednorazowy kod na e-mail.',
     emailLabel: 'E-mail',
@@ -84,7 +87,7 @@ export const pl: Strings = {
       },
       {
         heading: 'Gdzie są dane',
-        text: 'W bazie danych Supabase. Kody logowania wysyła serwis pocztowy Resend, a czcionki ładowane są z Google Fonts.',
+        text: 'W bazie danych Supabase. Kody logowania wysyła serwis pocztowy Resend, a czcionki ładowane są z Google Fonts. Przy logowaniu przez Google lub Apple otrzymujemy od nich tylko e-mail i imię.',
       },
       {
         heading: 'Usunięcie',
