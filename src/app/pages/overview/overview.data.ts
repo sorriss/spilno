@@ -74,7 +74,6 @@ async function fetchRows(month: Date): Promise<OverviewRows> {
       .select('paid_by_member_id, amount_base')
       .eq('family_id', me.familyId)
       .eq('is_shared', true)
-      .eq('is_hold', false)
       .gte('occurred_at', month.toISOString())
       .lt('occurred_at', nextMonth.toISOString()),
     db

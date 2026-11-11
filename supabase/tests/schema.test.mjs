@@ -525,18 +525,23 @@ test('аналитика: Сім’я — общие траты, Мої — ли
     await add(OLENA, 'expense', -700, null, olena, null, null, []),
     await add(ANDRII, 'transfer', -2000, null, andrii, olena, null, []),
     await add(ANDRII, 'income', 9000, null, andrii, null, null, []),
-    await add(ANDRII, 'expense', -1000, groceries, andrii, null, 'equal', half), // станет холдом
+    await add(ANDRII, 'expense', -1000, groceries, andrii, null, 'equal', half), // общий холд: считается сразу
+    await add(ANDRII, 'expense', -400, cafe, andrii, null, null, []), // личный холд: ждёт окончательной суммы
   ].map(([r]) => r.id);
-  await db.exec(`update transactions set is_hold = true where id = '${ids.at(-1)}'`);
+  const olenaBalance = async () =>
+    Number((await as(OLENA, 'select balance from member_balances where member_id = $1', [olena]))[0].balance);
+  const balanceBefore = await olenaBalance();
+  await db.exec(`update transactions set is_hold = true where id in ('${ids.at(-2)}', '${ids.at(-1)}')`);
+  assert.equal(balanceBefore - (await olenaBalance()), 0, 'общий холд остаётся в балансе');
 
   const after = await snapshot();
   const delta = after.map((a, i) => Object.fromEntries(
     Object.entries(a).map(([k, v]) => [k, v - (before[i][k] ?? 0)]).filter(([, v]) => v !== 0)));
   assert.deepEqual(delta, [
-    { [`expense:${groceries}`]: 1000 },
-    { [`expense:${groceries}`]: 1000 },
-    { [`expense:${groceries}`]: 500, [`expense:${cafe}`]: 300, 'transfer:null': 2000 },
-    { [`expense:${groceries}`]: 500, 'expense:null': 700 },
+    { [`expense:${groceries}`]: 2000 },
+    { [`expense:${groceries}`]: 2000 },
+    { [`expense:${groceries}`]: 1000, [`expense:${cafe}`]: 300, 'transfer:null': 2000 },
+    { [`expense:${groceries}`]: 1000, 'expense:null': 700 },
     {},
   ]);
 
