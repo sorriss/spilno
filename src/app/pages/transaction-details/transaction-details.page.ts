@@ -8,9 +8,8 @@ import { formatMoney, parseKopecks } from '../../core/money';
 import { Tx } from '../../core/transactions';
 import { i18n } from '../../i18n';
 import { nameOf, TxRow } from '../../shell/tx-row';
-import {
-  addManualRefund, deleteTransaction, linkRefund, loadDetails, loadRefundCandidates,
-} from './transaction-details.data';
+import { linkRefund } from '../../core/refunds';
+import { addManualRefund, deleteTransaction, loadDetails, loadRefundCandidates } from './transaction-details.data';
 
 @Component({
   selector: 'app-transaction-details',

@@ -417,6 +417,11 @@ export const pl: Strings = {
     noRecent: 'Nie ma jeszcze operacji. Dodaj pierwszą przyciskiem „+”.',
     loadError: 'Nie udało się wczytać danych',
     demo: 'Dane demo: Supabase nie jest jeszcze połączone',
+    refundTitle: 'Wygląda na zwrot',
+    refundFor: (title: string, total: string) => `za „${title}”, ${total}`,
+    refundLink: 'Połącz',
+    refundDismiss: 'Nie',
+    refundError: 'Nie udało się zapisać. Spróbuj ponownie.',
   },
   transaction: {
     transfer: 'Przelew',

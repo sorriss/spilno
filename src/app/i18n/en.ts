@@ -417,6 +417,11 @@ export const en: Strings = {
     noRecent: 'No transactions yet. Add the first one with the “+” button.',
     loadError: 'Couldn’t load data',
     demo: 'Demo data: Supabase isn’t connected yet',
+    refundTitle: 'Looks like a refund',
+    refundFor: (title: string, total: string) => `for “${title}”, ${total}`,
+    refundLink: 'Link',
+    refundDismiss: 'No',
+    refundError: 'Couldn’t save. Please try again.',
   },
   transaction: {
     transfer: 'Transfer',

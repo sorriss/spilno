@@ -93,17 +93,6 @@ export async function loadRefundCandidates(expense: Tx): Promise<RefundCandidate
   return data.map((r) => ({ id: r.id, amount: r.amount_base, occurredAt: r.occurred_at, comment: r.comment }));
 }
 
-/** expenseId = null снимает связь. Доли траты пересчитывает база. */
-export async function linkRefund(incomeId: string, expenseId: string | null): Promise<void> {
-  const { data, error } = await supabase!
-    .from('transactions')
-    .update({ refund_of: expenseId })
-    .eq('id', incomeId)
-    .select('id');
-  if (error) throw error;
-  if (!data.length) throw new Error('Refund was not linked');
-}
-
 /** Возврат наличными или без операции в выписке: создаём доход сразу привязанным. */
 export async function addManualRefund(expense: Tx, amount: number, comment: string): Promise<void> {
   const me = await currentMember();

@@ -419,6 +419,11 @@ export const uk = {
     noRecent: 'Операцій ще немає. Додайте першу кнопкою «+».',
     loadError: 'Не вдалося завантажити дані',
     demo: 'Демо-дані: Supabase ще не підключено',
+    refundTitle: 'Схоже на повернення',
+    refundFor: (title: string, total: string) => `за «${title}», ${total}`,
+    refundLink: 'Прив’язати',
+    refundDismiss: 'Ні',
+    refundError: 'Не вдалося зберегти. Спробуйте ще раз.',
   },
   transaction: {
     transfer: 'Переказ',

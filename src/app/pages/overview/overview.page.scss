@@ -245,3 +245,62 @@ a {
 .demo {
   text-align: center;
 }
+
+.refund {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-1);
+  padding: var(--sp-space-4);
+
+  h2,
+  p {
+    margin: 0;
+  }
+
+  .hint a {
+    color: inherit;
+  }
+}
+
+.refund-amount {
+  margin: 0;
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 800;
+  color: var(--sp-income);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.refund-from {
+  font-weight: 700;
+  color: var(--sp-text);
+}
+
+.refund-actions {
+  display: flex;
+  gap: var(--sp-space-2);
+  margin-top: var(--sp-space-2);
+
+  button {
+    min-height: 44px;
+    padding: 0 var(--sp-space-4);
+    border-radius: 22px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+}
+
+.refund-yes {
+  border: 0;
+  background: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+}
+
+.refund-no {
+  border: 1px solid var(--sp-line);
+  background: none;
+  color: inherit;
+}

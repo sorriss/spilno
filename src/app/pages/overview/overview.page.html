@@ -83,6 +83,30 @@
         }
       </section>
 
+      @if (refunds.hasValue()) {
+        @for (r of refunds.value(); track r.income.id) {
+          <section class="card refund">
+            <h2 class="caption">{{ t.overview.refundTitle }}</h2>
+            <p class="refund-amount">
+              {{ formatMoney(r.income.amount, { plus: true }) }}
+              @if (r.income.comment) {
+                <span class="refund-from">· {{ r.income.comment }}</span>
+              }
+            </p>
+            <p class="hint">
+              <a [routerLink]="['/tabs/transactions', r.expense.id]">{{ t.overview.refundFor(r.expense.title, formatMoney(r.expense.amount)) }}</a>
+            </p>
+            <div class="refund-actions">
+              <button type="button" class="refund-yes" [disabled]="refundBusy()" (click)="answerRefund(r, true)">{{ t.overview.refundLink }}</button>
+              <button type="button" class="refund-no" [disabled]="refundBusy()" (click)="answerRefund(r, false)">{{ t.overview.refundDismiss }}</button>
+            </div>
+          </section>
+        }
+        @if (refundError()) {
+          <p class="form-error" role="alert">{{ refundError() }}</p>
+        }
+      }
+
       <div class="section-head">
         <h2>{{ t.overview.recent }}</h2>
         <a routerLink="/tabs/transactions">{{ t.overview.all }}</a>
