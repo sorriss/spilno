@@ -77,11 +77,13 @@ export class NewExpensePage {
     return d?.members.filter((m) => m.id !== d.authorId) ?? [];
   });
   protected readonly amount = computed(() => parseKopecks(this.amountText()) ?? 0);
-  protected readonly rows = computed<ShareRow[]>(() =>
-    (this.loaded()?.members ?? []).map((m) => ({
-      memberId: m.id, on: true, weight: '1', amount: '', ...this.edits()[m.id],
-    })),
-  );
+  /** Новая витрата по умолчанию на 100% автора; при правке prefill задаёт on для всех. */
+  protected readonly rows = computed<ShareRow[]>(() => {
+    const d = this.loaded();
+    return (d?.members ?? []).map((m) => ({
+      memberId: m.id, on: m.id === d!.authorId, weight: '1', amount: '', ...this.edits()[m.id],
+    }));
+  });
   protected readonly shares = computed(() => computeShares(this.amount(), this.mode(), this.rows()));
   private readonly left = computed(() => {
     const shares = this.shares();
@@ -100,7 +102,10 @@ export class NewExpensePage {
     addIcons({ close });
   }
 
-  /** Форма правки начинает с того, что сохранено: включены только участники с долями. */
+  /**
+   * Форма правки начинает с того, что сохранено: включены только участники с долями.
+   * У личной операции включён один плательщик: переведённая в спільні, она по умолчанию на 100% его.
+   */
   private prefill(tx: EditTx, members: NewExpenseData['members']): void {
     this.type.set(tx.type);
     this.amountText.set(formatMoney(tx.amount));
@@ -117,7 +122,7 @@ export class NewExpensePage {
       Object.fromEntries(
         members.map((m) => {
           const share = shares.get(m.id);
-          return [m.id, { on: !tx.mode || !!share, weight: String(share?.weight ?? 1), amount: share ? formatMoney(share.amount) : '' }];
+          return [m.id, { on: tx.mode ? !!share : m.id === tx.paidBy, weight: String(share?.weight ?? 1), amount: share ? formatMoney(share.amount) : '' }];
         }),
       ),
     );
