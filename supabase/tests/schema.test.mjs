@@ -675,6 +675,54 @@ test('участник не может повысить себе роль и с�
   await assert.rejects(as(ANDRII, 'update transactions set created_by_member_id = $1', [olena]), /permission denied/);
 });
 
+test('возврат уменьшает общую трату: доли, баланс и аналитика по чистой сумме', async () => {
+  const exp = '30000000-0000-4000-8000-000000000001';
+  const shares = async () => (await as(ANDRII, `select s.member_id, s.amount from transaction_shares s
+    join family_members m on m.id = s.member_id where transaction_id = $1 order by m.joined_at`, [exp]))
+    .map((r) => [r.member_id, Number(r.amount)]);
+  const balance = async (m) => Number((await as(ANDRII, 'select balance from member_balances where member_id = $1', [m]))[0].balance);
+  const income = async (user, member, amount) => (await as(user, `insert into transactions
+    (family_id, type, amount, amount_base, created_by_member_id, paid_by_member_id, refunded)
+    values ($1, 'income', $3, $3, $2, $2, 999) returning id, refunded`, [fam, member, amount]))[0];
+
+  const olenaBefore = await balance(olena);
+  await txAs(ANDRII, sharedExpense(exp, {
+    paidBy: andrii, total: 154000, shares: [[andrii, 51334], [olena, 51333], [sofia, 51333]],
+  }));
+  const back = await income(ANDRII, andrii, 77000);
+  assert.equal(Number(back.refunded), 0, 'refunded пишет только триггер');
+
+  await as(ANDRII, 'update transactions set refund_of = $1 where id = $2', [exp, back.id]);
+  assert.deepEqual(await shares(), [[andrii, 25667], [olena, 25667], [sofia, 25666]]);
+  const [{ net }] = await as(OLENA, 'select net_base as net from transactions where id = $1', [exp]);
+  assert.equal(Number(net), -77000);
+  assert.equal(await balance(olena), olenaBefore - 25667);
+
+  const month = new Date().toISOString().slice(0, 7) + '-01';
+  const [{ total }] = await as(OLENA, `select sum(amount)::bigint as total from analytics($1, false, $2::date, ($2::date + interval '1 month')::date)`,
+    [fam, month]);
+  const [{ shared }] = await as(OLENA, `select -sum(net_base)::bigint as shared from transactions
+    where family_id = $1 and is_shared and occurred_at >= $2::date`, [fam, month]);
+  assert.equal(Number(total), Number(shared));
+
+  // Возврат на чужую трату и возврат на всю сумму не проходят.
+  const hers = await income(OLENA, olena, 1000);
+  await assert.rejects(as(OLENA, 'update transactions set refund_of = $1 where id = $2', [exp, hers.id]), /same member/);
+  const more = await income(ANDRII, andrii, 77000);
+  await assert.rejects(as(ANDRII, 'update transactions set refund_of = $1 where id = $2', [exp, more.id]), /check/);
+
+  await as(ANDRII, 'update transactions set refund_of = null where id = $1', [back.id]);
+  assert.deepEqual(await shares(), [[andrii, 51334], [olena, 51333], [sofia, 51333]]);
+
+  await as(ANDRII, 'update transactions set refund_of = $1 where id = $2', [exp, back.id]);
+  await as(ANDRII, 'delete from transactions where id = $1', [exp]);
+  const [{ refund_of }] = await as(ANDRII, 'select refund_of from transactions where id = $1', [back.id]);
+  assert.equal(refund_of, null);
+  await as(ANDRII, 'delete from transactions where id = any($1)', [[back.id, more.id]]);
+  await as(OLENA, 'delete from transactions where id = $1', [hers.id]);
+  assert.equal(await balance(olena), olenaBefore);
+});
+
 test('вышедший участник теряет доступ', async () => {
   await as(ANDRII, 'update family_members set left_at = now() where id = $1', [sofia]);
   assert.equal((await as(SOFIA, 'select 1 from transactions where family_id = $1', [fam])).length, 0);

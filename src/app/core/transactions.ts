@@ -14,9 +14,12 @@ export interface Member {
   isMe: boolean;
 }
 
-/** Поля операции для строки списка. shareCount передаётся отдельно: экраны получают доли по-разному. */
+/**
+ * Поля операции для строки списка. shareCount передаётся отдельно: экраны получают доли по-разному.
+ * amount_base здесь — чистая сумма (net_base): трата за вычетом привязанных возвратов.
+ */
 export const TX_FIELDS =
-  'id, type, amount_base, occurred_at, comment, is_shared, is_internal_transfer, split_mode, paid_by_member_id, to_member_id, categories(name, icon, color_index)';
+  'id, type, amount_base:net_base, occurred_at, comment, is_shared, is_internal_transfer, split_mode, paid_by_member_id, to_member_id, categories(name, icon, color_index)';
 
 export interface TxRow {
   id: string;

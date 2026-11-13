@@ -14,7 +14,7 @@
 | `/tabs/overview` | Огляд | auth, family | **готов** |
 | `/tabs/overview/analytics` | Аналітика: Сім’я / Мої, категории за месяц, 6 месяцев | auth, family | **готов** |
 | `/tabs/transactions` | Операції | auth, family | **готов**, без поиска и фильтров по категории |
-| `/tabs/transactions/:id` | Деталі операції | auth, family | **готов**: просмотр, правка и удаление |
+| `/tabs/transactions/:id` | Деталі операції | auth, family | **готов**: просмотр, правка, удаление, привязка возврата |
 | `/tabs/settle` | Розрахунки | auth, family | **готов** |
 | `/tabs/settle/history` | Історія | auth, family | **готов** |
 | `/tabs/more` | Ще | auth, family | **готов**, сповіщення в разделе «Застосунок» |

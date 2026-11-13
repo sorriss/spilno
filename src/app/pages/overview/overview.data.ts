@@ -71,7 +71,7 @@ async function fetchRows(month: Date): Promise<OverviewRows> {
     // ponytail: считаем на клиенте, упрётся в лимит PostgREST 1000 строк; при таком объёме заменить на view с суммами.
     db
       .from('transactions')
-      .select('paid_by_member_id, amount_base')
+      .select('paid_by_member_id, amount_base:net_base')
       .eq('family_id', me.familyId)
       .eq('is_shared', true)
       .gte('occurred_at', month.toISOString())

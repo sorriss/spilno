@@ -4,10 +4,13 @@ import {
   NavController,
 } from '@ionic/angular';
 import { RouterLink } from '@angular/router';
-import { formatMoney } from '../../core/money';
+import { formatMoney, parseKopecks } from '../../core/money';
+import { Tx } from '../../core/transactions';
 import { i18n } from '../../i18n';
 import { nameOf, TxRow } from '../../shell/tx-row';
-import { deleteTransaction, loadDetails } from './transaction-details.data';
+import {
+  addManualRefund, deleteTransaction, linkRefund, loadDetails, loadRefundCandidates,
+} from './transaction-details.data';
 
 @Component({
   selector: 'app-transaction-details',
@@ -42,7 +45,30 @@ import { deleteTransaction, loadDetails } from './transaction-details.data';
                   <dd>{{ d.tx.comment }}</dd>
                 </div>
               }
+              @if (d.refunded) {
+                <div>
+                  <dt>{{ s.refunded }}</dt>
+                  <dd>{{ money(d.refunded) }} <span class="muted">{{ s.refundedOf(money(d.refunded - d.tx.amount_base)) }}</span></dd>
+                </div>
+              }
+              @if (d.refundOf; as target) {
+                <div>
+                  <dt>{{ s.refundFor }}</dt>
+                  <dd><a [routerLink]="['/tabs/transactions', target.id]">{{ target.title || s.title }}</a></dd>
+                </div>
+              }
             </dl>
+
+            @if (d.refunds.length) {
+              <section>
+                <h2>{{ s.refunds }}</h2>
+                <div class="tx-list">
+                  @for (r of d.refunds; track r.id) {
+                    <a class="tx-link" [routerLink]="['/tabs/transactions', r.id]"><app-tx-row [tx]="r" /></a>
+                  }
+                </div>
+              </section>
+            }
 
             @if (d.shares.length) {
               <section>
@@ -64,6 +90,12 @@ import { deleteTransaction, loadDetails } from './transaction-details.data';
 
             @if (error()) {
               <p class="form-error" role="alert">{{ error() }}</p>
+            }
+            @if (d.canRefund) {
+              <button type="button" class="secondary" [disabled]="busy()" (click)="addRefund(d.tx)">{{ s.addRefund }}</button>
+            }
+            @if (d.refundOf && d.canEdit) {
+              <button type="button" class="secondary" [disabled]="busy()" (click)="unlink()">{{ s.unlinkRefund }}</button>
             }
             @if (d.canEdit) {
               <a class="cta" [routerLink]="['/edit', d.tx.id]">{{ s.edit }}</a>
@@ -158,6 +190,24 @@ import { deleteTransaction, loadDetails } from './transaction-details.data';
       font-size: 15px;
       font-weight: 700;
     }
+    .muted {
+      font-weight: 600;
+      color: var(--sp-text-secondary);
+    }
+    dd a {
+      color: inherit;
+    }
+    .secondary {
+      min-height: 44px;
+      border: 1px solid var(--sp-divider);
+      border-radius: var(--sp-radius-button);
+      background: none;
+      color: inherit;
+      font: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
     .delete {
       min-height: 44px;
       border: 0;
@@ -209,6 +259,85 @@ export class TransactionDetailsPage {
 
   protected date(iso: string): string {
     return new Date(iso).toLocaleDateString(i18n.locale, { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  /** Выбор своего надходження; если подходящего нет в выписке — сумма вручную. */
+  protected async addRefund(expense: Tx): Promise<void> {
+    const candidates = await this.run(() => loadRefundCandidates(expense));
+    if (!candidates) return;
+    if (!candidates.length) return this.manualRefund(expense);
+    const short = (iso: string) => new Date(iso).toLocaleDateString(i18n.locale, { day: 'numeric', month: 'short' });
+    const alert = await this.alerts.create({
+      header: this.s.refundPickTitle,
+      message: this.s.refundPickHint,
+      inputs: [
+        ...candidates.map((c, i) => ({
+          type: 'radio' as const,
+          value: c.id,
+          checked: i === 0,
+          label: [formatMoney(c.amount, { plus: true }), short(c.occurredAt), c.comment].filter(Boolean).join(' · '),
+        })),
+        { type: 'radio' as const, value: 'manual', label: this.s.refundManual },
+      ],
+      buttons: [
+        { text: this.s.cancel, role: 'cancel' },
+        {
+          text: this.s.next,
+          handler: (id: string) => {
+            if (id === 'manual') void this.manualRefund(expense);
+            else void this.run(() => linkRefund(id, expense.id));
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  private async manualRefund(expense: Tx): Promise<void> {
+    const max = -expense.amount_base;
+    const alert = await this.alerts.create({
+      header: this.s.refundAmountTitle,
+      inputs: [
+        { name: 'amount', type: 'text', placeholder: '0,00', attributes: { inputmode: 'decimal', 'aria-label': this.s.refundAmountLabel } },
+      ],
+      buttons: [
+        { text: this.s.cancel, role: 'cancel' },
+        {
+          text: this.s.save,
+          handler: ({ amount: text }: { amount: string }) => {
+            const amount = parseKopecks(text);
+            if (!amount || amount <= 0 || amount >= max) {
+              alert.message = this.s.refundAmountError(formatMoney(max));
+              return false; // окно остаётся открытым, чтобы исправить сумму
+            }
+            void this.run(() => addManualRefund(expense, amount, this.s.refundComment));
+            return true;
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  protected unlink(): Promise<unknown> {
+    return this.run(() => linkRefund(this.id(), null));
+  }
+
+  /** Действие с возвратом: после записи доли и сумма траты изменились, страницу перечитываем. */
+  private async run<T>(action: () => Promise<T>): Promise<T | undefined> {
+    if (this.busy()) return undefined;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      const result = await action();
+      this.details.reload();
+      return result;
+    } catch {
+      this.error.set(this.s.refundError);
+      return undefined;
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   protected async confirmDelete(): Promise<void> {

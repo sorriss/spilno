@@ -77,6 +77,8 @@ export class NewExpensePage {
     return d?.members.filter((m) => m.id !== d.authorId) ?? [];
   });
   protected readonly amount = computed(() => parseKopecks(this.amountText()) ?? 0);
+  /** Делится чистая сумма: привязанные возвраты уже вернулись плательщику. */
+  private readonly splitTotal = computed(() => Math.max(this.amount() - (this.loaded()?.editing?.refunded ?? 0), 0));
   /** Новая витрата по умолчанию на 100% автора; при правке prefill задаёт on для всех. */
   protected readonly rows = computed<ShareRow[]>(() => {
     const d = this.loaded();
@@ -84,17 +86,17 @@ export class NewExpensePage {
       memberId: m.id, on: m.id === d!.authorId, weight: '1', amount: '', ...this.edits()[m.id],
     }));
   });
-  protected readonly shares = computed(() => computeShares(this.amount(), this.mode(), this.rows()));
+  protected readonly shares = computed(() => computeShares(this.splitTotal(), this.mode(), this.rows()));
   private readonly left = computed(() => {
     const shares = this.shares();
-    return shares ? this.amount() - shares.reduce((sum, s) => sum + s.amount, 0) : 0;
+    return shares ? this.splitTotal() - shares.reduce((sum, s) => sum + s.amount, 0) : 0;
   });
   protected readonly status = computed(() => {
     const left = this.left();
     if (this.mode() !== 'amounts' || !this.shares()) return '';
     if (left > 0) return this.s.unallocated(formatMoney(left));
     if (left < 0) return this.s.overallocated(formatMoney(-left));
-    return this.amount() ? this.s.allocated(formatMoney(this.amount())) : '';
+    return this.splitTotal() ? this.s.allocated(formatMoney(this.splitTotal())) : '';
   });
   protected readonly statusBad = computed(() => this.left() !== 0);
 

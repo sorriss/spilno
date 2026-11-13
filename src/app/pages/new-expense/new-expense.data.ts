@@ -25,6 +25,8 @@ export interface EditTx {
   type: TxType;
   /** Копейки без знака. */
   amount: number;
+  /** Привязанные возвраты, копейки без знака: доли делят amount − refunded. */
+  refunded: number;
   occurredAt: string;
   comment: string | null;
   categoryId: string | null;
@@ -39,6 +41,7 @@ type EditRow = {
   id: string;
   type: TxType;
   amount_base: number;
+  refunded: number;
   occurred_at: string;
   comment: string | null;
   category_id: string | null;
@@ -86,7 +89,7 @@ export async function loadNewExpense(id?: string): Promise<NewExpenseData | null
     const { data, error } = await db
       .from('transactions')
       .select(
-        'id, type, amount_base, occurred_at, comment, category_id, account_id, created_by_member_id, paid_by_member_id, to_member_id, split_mode, shares:transaction_shares(member_id, amount, weight)',
+        'id, type, amount_base, refunded, occurred_at, comment, category_id, account_id, created_by_member_id, paid_by_member_id, to_member_id, split_mode, shares:transaction_shares(member_id, amount, weight)',
       )
       .eq('id', id)
       .maybeSingle();
@@ -123,6 +126,7 @@ export async function loadNewExpense(id?: string): Promise<NewExpenseData | null
       id: tx.id,
       type: tx.type,
       amount: Math.abs(tx.amount_base),
+      refunded: tx.refunded,
       occurredAt: tx.occurred_at,
       comment: tx.comment,
       categoryId: tx.category_id,
