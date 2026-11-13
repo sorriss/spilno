@@ -2,8 +2,8 @@ import { Component, computed, input } from '@angular/core';
 import { IonIcon } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
-  airplaneOutline, bedOutline, busOutline, cafeOutline, cardOutline, carOutline, cartOutline, filmOutline, giftOutline,
-  happyOutline, homeOutline, medkitOutline, pricetagOutline, shirtOutline, swapHorizontalOutline,
+  airplaneOutline, bedOutline, busOutline, cafeOutline, cardOutline, carOutline, cartOutline, cubeOutline, filmOutline,
+  giftOutline, happyOutline, homeOutline, medkitOutline, peopleOutline, pricetagOutline, shirtOutline, swapHorizontalOutline,
 } from 'ionicons/icons';
 import { formatMoney } from '../core/money';
 import { Member, Tx } from '../core/transactions';
@@ -13,8 +13,8 @@ export const nameOf = (member: Member): string => (member.isMe ? i18n.you : memb
 
 /** Иконки категорий из create_family: новую категорию с другой иконкой регистрировать здесь же. */
 export const CATEGORY_ICONS = {
-  airplaneOutline, bedOutline, busOutline, cafeOutline, cardOutline, carOutline, cartOutline, filmOutline,
-  giftOutline, happyOutline, homeOutline, medkitOutline, pricetagOutline, shirtOutline, swapHorizontalOutline,
+  airplaneOutline, bedOutline, busOutline, cafeOutline, cardOutline, carOutline, cartOutline, cubeOutline, filmOutline,
+  giftOutline, happyOutline, homeOutline, medkitOutline, peopleOutline, pricetagOutline, shirtOutline, swapHorizontalOutline,
 };
 
 /** Строка операции: иконка, название, кто платил и как делили, сумма. */

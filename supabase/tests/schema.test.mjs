@@ -82,11 +82,11 @@ before(async () => {
   sofia = await memberId(SOFIA);
 });
 
-test('create_family: владелец и 14 категорий', async () => {
+test('create_family: владелец и 16 категорий', async () => {
   const [{ role }] = await as(ANDRII, 'select role from family_members where id = $1', [andrii]);
   assert.equal(role, 'owner');
   const cats = await as(ANDRII, 'select id from categories where family_id = $1', [fam]);
-  assert.equal(cats.length, 14);
+  assert.equal(cats.length, 16);
 });
 
 test('приглашение одноразовое и неверный код не проходит', async () => {

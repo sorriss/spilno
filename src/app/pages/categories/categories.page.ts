@@ -6,10 +6,7 @@ import { i18n } from '../../i18n';
 import { askConfirm, askName } from '../../shell/ask-name';
 import { addCategory, CategoriesView, Category, CategoryKind, loadCategories, updateCategory } from './categories.data';
 import { addIcons } from 'ionicons';
-import {
-  airplaneOutline, bedOutline, busOutline, cafeOutline, cardOutline, carOutline, cartOutline, filmOutline, giftOutline,
-  happyOutline, homeOutline, medkitOutline, pricetagOutline, shirtOutline,
-} from 'ionicons/icons';
+import { CATEGORY_ICONS } from '../../shell/tx-row';
 
 @Component({
   selector: 'app-categories',
@@ -151,10 +148,7 @@ export class CategoriesPage {
   );
 
   constructor() {
-    addIcons({
-      airplaneOutline, bedOutline, busOutline, cafeOutline, cardOutline, carOutline, cartOutline, filmOutline,
-      giftOutline, happyOutline, homeOutline, medkitOutline, pricetagOutline, shirtOutline,
-    });
+    addIcons(CATEGORY_ICONS);
   }
 
   protected async add(v: CategoriesView, form: HTMLFormElement): Promise<void> {
