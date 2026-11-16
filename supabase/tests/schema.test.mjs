@@ -647,6 +647,17 @@ test('долг закрывают по трате: open_shares, проверка
     delete from transactions where id in ('${tx}', '${bank}')`);
 });
 
+test('set_my_color меняет только свой цвет и только в пределах палитры', async () => {
+  const color = async (m) => (await as(ANDRII, 'select color_index from family_members where id = $1', [m]))[0].color_index;
+  const before = await color(andrii);
+  await as(OLENA, 'select set_my_color($1, 3::smallint)', [fam]);
+  assert.equal(await color(olena), 3);
+  assert.equal(await color(andrii), before);
+  await assert.rejects(as(OLENA, 'select set_my_color($1, 5::smallint)', [fam]), /check/);
+  await assert.rejects(as(STRANGER, 'select set_my_color($1, 1::smallint)', [fam]), /not a family member/);
+  await as(OLENA, 'select set_my_color($1, 1::smallint)', [fam]);
+});
+
 test('rename_me меняет только своё имя и не даёт повысить роль', async () => {
   await as(OLENA, `select rename_me($1, ' Оленка ')`, [fam]);
   const rows = await as(ANDRII, 'select id, display_name, role from family_members where family_id = $1', [fam]);

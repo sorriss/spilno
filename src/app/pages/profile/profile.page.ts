@@ -12,12 +12,13 @@ async function loadProfile() {
   const me = await currentMember();
   const [{ data: auth }, member] = await Promise.all([
     db.auth.getUser(),
-    db.from('family_members').select('display_name, mono_pay_link').eq('id', me.id).single(),
+    db.from('family_members').select('display_name, color_index, mono_pay_link').eq('id', me.id).single(),
   ]);
   if (member.error) throw member.error;
   return {
     familyId: me.familyId,
     name: member.data.display_name as string,
+    color: member.data.color_index as number,
     payLink: (member.data.mono_pay_link as string | null) ?? '',
     email: auth.user?.email ?? '',
   };
@@ -41,6 +42,15 @@ async function loadProfile() {
             <label for="name">{{ s.nameLabel }}</label>
             <input id="name" name="name" class="input" maxlength="60" required [value]="p.name" />
             <p class="hint">{{ s.nameHint }}</p>
+            <fieldset class="colors">
+              <legend>{{ s.colorLabel }}</legend>
+              @for (c of s.colorNames; track $index) {
+                <label class="color tone-{{ $index }}">
+                  <input type="radio" name="color" [value]="$index" [checked]="$index === p.color" [attr.aria-label]="c" />
+                  <span aria-hidden="true">{{ p.name[0] }}</span>
+                </label>
+              }
+            </fieldset>
             <label for="payLink">{{ s.payLinkLabel }}</label>
             <input
               id="payLink"
@@ -73,6 +83,48 @@ async function loadProfile() {
     </ion-content>
   `,
   styles: `
+    .colors {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-space-3);
+      margin: 0 0 var(--sp-space-3);
+      padding: 0;
+      border: 0;
+    }
+    .colors legend {
+      margin-bottom: var(--sp-space-2);
+      padding: 0;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .color {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--tone-bg);
+      color: var(--tone-fg);
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .color input {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .color:has(input:checked) {
+      box-shadow: 0 0 0 2px var(--ion-background-color), 0 0 0 4px var(--tone-fg);
+    }
+    .color:has(input:focus-visible) {
+      outline: 2px solid var(--ion-color-primary);
+      outline-offset: 4px;
+    }
     .hint {
       margin: 0 0 var(--sp-space-2);
       font-size: 13px;
@@ -109,6 +161,7 @@ export class ProfilePage {
     if (this.busy()) return;
     const data = new FormData(form);
     const name = String(data.get('name') ?? '').trim();
+    const color = Number(data.get('color'));
     const rawLink = String(data.get('payLink') ?? '').trim();
     const payLink = rawLink ? normalizePayLink(rawLink) : '';
     if (!name) {
@@ -122,11 +175,12 @@ export class ProfilePage {
     this.busy.set(true);
     this.error.set('');
     try {
-      const [renamed, linked] = await Promise.all([
+      const [renamed, linked, colored] = await Promise.all([
         supabase!.rpc('rename_me', { fam: familyId, member_name: name }),
         supabase!.rpc('set_pay_link', { fam: familyId, link: payLink }),
+        supabase!.rpc('set_my_color', { fam: familyId, color }),
       ]);
-      const error = renamed.error ?? linked.error;
+      const error = renamed.error ?? linked.error ?? colored.error;
       if (error) throw error;
       await this.nav.navigateBack('/tabs/more');
     } catch {

@@ -212,6 +212,8 @@ export const en: Strings = {
     title: 'Profile',
     nameLabel: 'Your name in the family',
     nameHint: 'All members see this name.',
+    colorLabel: 'Your color',
+    colorNames: ['Blue', 'Orange', 'Green', 'Purple', 'Yellow'],
     payLinkLabel: 'Your mono link for transfers to you',
     payLinkHint: 'In the mono app: “+” next to the card → “By link” → copy the link without an amount. Then people who owe you can open the transfer with the right amount in one tap.',
     errorPayLink: 'This isn’t a mono link. It should start with https://send.monobank.ua/',

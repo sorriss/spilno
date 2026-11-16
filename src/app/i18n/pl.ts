@@ -212,6 +212,8 @@ export const pl: Strings = {
     title: 'Profil',
     nameLabel: 'Twoje imię w rodzinie',
     nameHint: 'To imię widzą wszyscy członkowie.',
+    colorLabel: 'Twój kolor',
+    colorNames: ['Niebieski', 'Pomarańczowy', 'Zielony', 'Fioletowy', 'Żółty'],
     payLinkLabel: 'Link mono do przelewów dla ciebie',
     payLinkHint: 'W aplikacji mono: „+” przy karcie → „Przez link” → skopiuj link bez kwoty. Wtedy osoby, które są ci winne, otworzą przelew z właściwą kwotą jednym dotknięciem.',
     errorPayLink: 'To nie jest link mono. Powinien zaczynać się od https://send.monobank.ua/',
