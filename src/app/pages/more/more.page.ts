@@ -22,7 +22,7 @@ import { loadMore } from './more.data';
         @if (view.hasValue()) {
           @let v = view.value();
           <a class="profile" routerLink="/tabs/more/profile">
-            <span class="avatar big tone-{{ v.colorIndex }}" aria-hidden="true">{{ v.name[0] }}</span>
+            <span class="avatar big tone-{{ v.colorIndex }}" [class.photo]="!!v.avatar" [style.background-image]="v.avatar ? 'url(' + v.avatar + ')' : null" aria-hidden="true">{{ v.name[0] }}</span>
             <span class="text">
               <strong>{{ v.name }}</strong>
               <small>{{ t.family.roles[v.role] }} · {{ v.familyName }}</small>
@@ -37,7 +37,7 @@ import { loadMore } from './more.data';
               <span class="label">{{ s.members }}</span>
               <span class="stack" aria-hidden="true">
                 @for (m of v.members; track m.id) {
-                  <span class="avatar tiny tone-{{ m.colorIndex }}">{{ m.name[0] }}</span>
+                  <span class="avatar tiny tone-{{ m.colorIndex }}" [class.photo]="!!m.avatar" [style.background-image]="m.avatar ? 'url(' + m.avatar + ')' : null">{{ m.name[0] }}</span>
                 }
               </span>
               <ion-icon name="chevron-forward" aria-hidden="true" />

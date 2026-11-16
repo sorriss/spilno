@@ -10,7 +10,7 @@ export interface FamilyView {
   familyId: string;
   familyName: string;
   isOwner: boolean;
-  members: { id: string; name: string; role: MemberRole; colorIndex: number; isMe: boolean; balance: number }[];
+  members: { id: string; name: string; role: MemberRole; colorIndex: number; avatar: string | null; isMe: boolean; balance: number }[];
   /** Коды видит только владелец: у остальных всегда null. */
   invite: Invite | null;
 }
@@ -23,7 +23,7 @@ export async function loadFamily(): Promise<FamilyView> {
   const [members, invite, balances] = await Promise.all([
     db
       .from('family_members')
-      .select('id, display_name, role, color_index')
+      .select('id, display_name, role, color_index, avatar')
       .eq('family_id', me.familyId)
       .is('left_at', null)
       .order('joined_at'),
@@ -43,6 +43,7 @@ export async function loadFamily(): Promise<FamilyView> {
       name: m.display_name,
       role: m.role,
       colorIndex: m.color_index,
+      avatar: m.avatar,
       isMe: m.id === me.id,
       balance: balances.data.find((b) => b.member_id === m.id)?.balance ?? 0,
     })),

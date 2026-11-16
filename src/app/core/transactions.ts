@@ -5,6 +5,8 @@ export interface MemberRow {
   display_name: string;
   color_index: number;
   left_at: string | null;
+  /** Фото из Google (data:image/...), если есть. */
+  avatar?: string | null;
 }
 
 export interface Member {
@@ -12,6 +14,7 @@ export interface Member {
   name: string;
   colorIndex: number;
   isMe: boolean;
+  avatar?: string | null;
 }
 
 /**
@@ -45,7 +48,7 @@ export type Tx = Omit<TxRow, 'paid_by_member_id' | 'to_member_id'> & {
 export async function allMembers(familyId: string): Promise<MemberRow[]> {
   const { data, error } = await supabase!
     .from('family_members')
-    .select('id, display_name, color_index, left_at')
+    .select('id, display_name, color_index, left_at, avatar')
     .eq('family_id', familyId)
     .order('joined_at');
   if (error) throw error;
@@ -55,7 +58,7 @@ export async function allMembers(familyId: string): Promise<MemberRow[]> {
 export function toMember(members: readonly MemberRow[], meId: string, id: string): Member {
   const row = members.find((m) => m.id === id);
   if (!row) throw new Error(`Unknown member ${id}`);
-  return { id, name: row.display_name, colorIndex: row.color_index, isMe: id === meId };
+  return { id, name: row.display_name, colorIndex: row.color_index, isMe: id === meId, avatar: row.avatar };
 }
 
 export function toTx(row: TxRow, shareCount: number, members: readonly MemberRow[], meId: string): Tx {

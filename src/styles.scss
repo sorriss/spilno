@@ -287,6 +287,15 @@ body {
   font-weight: 800;
 }
 
+// Фото участника из Google лежит фоном кружка, буква остаётся для экранов без фото.
+// :root поднимает специфичность над стилями страниц, где задан цвет буквы.
+:root .avatar.photo {
+  background-color: var(--tone-bg);
+  background-size: cover;
+  background-position: center;
+  color: transparent;
+}
+
 /* Переключатель: checkbox role="switch" внутри label. */
 .switch {
   display: flex;

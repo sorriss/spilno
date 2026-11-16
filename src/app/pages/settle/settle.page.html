@@ -7,7 +7,7 @@
       <section class="tx-list">
         @for (b of v.balances; track b.member.id) {
           <div class="balance">
-            <span class="avatar tone-{{ b.member.colorIndex }}" aria-hidden="true">{{ b.member.name[0] }}</span>
+            <span class="avatar tone-{{ b.member.colorIndex }}" [class.photo]="!!b.member.avatar" [style.background-image]="b.member.avatar ? 'url(' + b.member.avatar + ')' : null" aria-hidden="true">{{ b.member.name[0] }}</span>
             <span class="text">
               <span class="name">{{ name(b.member) }}</span>
               <span class="sub">{{ balanceHint(b.member.isMe, b.balance) }}</span>
@@ -29,9 +29,9 @@
         @for (p of v.payments; track p.from.id + p.to.id) {
           <section class="payment">
             <div class="pair">
-              <span class="avatar small tone-{{ p.from.colorIndex }}" aria-hidden="true">{{ p.from.name[0] }}</span>
+              <span class="avatar small tone-{{ p.from.colorIndex }}" [class.photo]="!!p.from.avatar" [style.background-image]="p.from.avatar ? 'url(' + p.from.avatar + ')' : null" aria-hidden="true">{{ p.from.name[0] }}</span>
               <ion-icon name="arrow-forward" aria-hidden="true" />
-              <span class="avatar small tone-{{ p.to.colorIndex }}" aria-hidden="true">{{ p.to.name[0] }}</span>
+              <span class="avatar small tone-{{ p.to.colorIndex }}" [class.photo]="!!p.to.avatar" [style.background-image]="p.to.avatar ? 'url(' + p.to.avatar + ')' : null" aria-hidden="true">{{ p.to.name[0] }}</span>
               <span class="pair-name">{{ label(p.from, p.to) }}</span>
               <span class="pair-sum">{{ money(p.amount) }}</span>
             </div>

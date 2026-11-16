@@ -16,7 +16,7 @@
         <ul class="card members">
           @for (m of f.members; track m.id) {
             <li>
-              <span class="avatar tone-{{ m.colorIndex }}" aria-hidden="true">{{ m.name[0] }}</span>
+              <span class="avatar tone-{{ m.colorIndex }}" [class.photo]="!!m.avatar" [style.background-image]="m.avatar ? 'url(' + m.avatar + ')' : null" aria-hidden="true">{{ m.name[0] }}</span>
               <span class="member-name">{{ m.name }}@if (m.isMe) { <small>&nbsp;· {{ t.you }}</small> }</span>
               @if (f.isOwner && !m.isMe && m.role !== 'owner') {
                 <select

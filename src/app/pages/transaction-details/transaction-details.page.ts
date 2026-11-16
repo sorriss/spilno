@@ -75,7 +75,7 @@ import { addManualRefund, deleteTransaction, loadDetails, loadRefundCandidates }
                 <ul class="tx-list">
                   @for (share of d.shares; track share.member.id) {
                     <li>
-                      <span class="avatar tone-{{ share.member.colorIndex }}" aria-hidden="true">{{ share.member.name[0] }}</span>
+                      <span class="avatar tone-{{ share.member.colorIndex }}" [class.photo]="!!share.member.avatar" [style.background-image]="share.member.avatar ? 'url(' + share.member.avatar + ')' : null" aria-hidden="true">{{ share.member.name[0] }}</span>
                       <span class="name">{{ name(share.member) }}</span>
                       @if (share.weight) {
                         <span class="weight">×{{ share.weight }}</span>

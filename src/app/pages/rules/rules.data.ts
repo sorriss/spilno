@@ -16,7 +16,7 @@ export interface RulesView {
   meId: string;
   role: MemberRole;
   rules: Rule[];
-  members: { id: string; name: string; colorIndex: number }[];
+  members: { id: string; name: string; colorIndex: number; avatar?: string | null }[];
   categories: { id: string; name: string }[];
 }
 
@@ -34,7 +34,7 @@ export async function loadRules(): Promise<RulesView> {
     db.from('share_rules').select('id, merchant, member_ids, categories(name)').eq('member_id', me.id).order('created_at'),
     db
       .from('family_members')
-      .select('id, display_name, color_index')
+      .select('id, display_name, color_index, avatar')
       .eq('family_id', me.familyId)
       .is('left_at', null)
       .order('joined_at'),
@@ -57,7 +57,7 @@ export async function loadRules(): Promise<RulesView> {
       merchant: r.merchant,
       memberIds: r.member_ids,
     })),
-    members: members.data!.map((m) => ({ id: m.id, name: m.display_name, colorIndex: m.color_index })),
+    members: members.data!.map((m) => ({ id: m.id, name: m.display_name, colorIndex: m.color_index, avatar: m.avatar as string | null })),
     categories: categories.data!.sort((a, b) => a.name.localeCompare(b.name, i18n.locale)),
   };
 }

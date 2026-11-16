@@ -64,7 +64,7 @@ type Kind = 'category' | 'merchant';
               <div class="chips">
                 @for (m of v.members; track m.id) {
                   <button type="button" class="chip" [attr.aria-pressed]="!excluded().has(m.id)" (click)="toggle(m.id)">
-                    <span class="avatar tone-{{ m.colorIndex }}" aria-hidden="true">{{ m.name[0] }}</span>
+                    <span class="avatar tone-{{ m.colorIndex }}" [class.photo]="!!m.avatar" [style.background-image]="m.avatar ? 'url(' + m.avatar + ')' : null" aria-hidden="true">{{ m.name[0] }}</span>
                     {{ m.id === v.meId ? t.you : m.name }}
                   </button>
                 }

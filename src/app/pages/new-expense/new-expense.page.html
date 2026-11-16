@@ -78,7 +78,7 @@
               <div class="chips">
                 @for (m of recipients(); track m.id) {
                   <button type="button" class="chip" [attr.aria-pressed]="toMember() === m.id" (click)="toMember.set(m.id)">
-                    <span class="avatar tone-{{ m.colorIndex }}" aria-hidden="true">{{ m.name[0] }}</span>{{ m.name }}
+                    <span class="avatar tone-{{ m.colorIndex }}" [class.photo]="!!m.avatar" [style.background-image]="m.avatar ? 'url(' + m.avatar + ')' : null" aria-hidden="true">{{ m.name[0] }}</span>{{ m.name }}
                   </button>
                 }
               </div>
@@ -109,7 +109,7 @@
                   [attr.aria-pressed]="(payer() ?? d.authorId) === m.id"
                   (click)="payer.set(m.id)"
                 >
-                  <span class="avatar tone-{{ m.colorIndex }}" aria-hidden="true">{{ m.name[0] }}</span>
+                  <span class="avatar tone-{{ m.colorIndex }}" [class.photo]="!!m.avatar" [style.background-image]="m.avatar ? 'url(' + m.avatar + ')' : null" aria-hidden="true">{{ m.name[0] }}</span>
                   {{ isMe(d, m.id) ? t.you : m.name }}
                 </button>
               }
@@ -128,7 +128,7 @@
               <div class="share">
                 <label>
                   <input type="checkbox" [checked]="row.on" (change)="edit(m.id, { on: $any($event.target).checked })" />
-                  <span class="avatar tone-{{ m.colorIndex }}" aria-hidden="true">{{ m.name[0] }}</span>
+                  <span class="avatar tone-{{ m.colorIndex }}" [class.photo]="!!m.avatar" [style.background-image]="m.avatar ? 'url(' + m.avatar + ')' : null" aria-hidden="true">{{ m.name[0] }}</span>
                   <span class="share-name">{{ isMe(d, m.id) ? t.you : m.name }}</span>
                 </label>
                 @if (row.on && mode() === 'shares') {

@@ -12,7 +12,7 @@ export interface NewExpenseData {
   /** Автор операции: при правке им может быть не текущий участник, а владелец правит чужую. */
   authorId: string;
   role: MemberRole;
-  members: { id: string; name: string; colorIndex: number }[];
+  members: { id: string; name: string; colorIndex: number; avatar?: string | null }[];
   categories: { id: string; name: string; kind: 'expense' | 'income' }[];
   /** Только свои счета: платить с чужого нельзя. При правке чужой операции пусто, счёт остаётся прежним. */
   accounts: { id: string; name: string }[];
@@ -104,7 +104,7 @@ export async function loadNewExpense(id?: string): Promise<NewExpenseData | null
   const keep = (column: string | null | undefined) => (column ? `archived_at.is.null,id.eq.${column}` : 'archived_at.is.null');
 
   const [members, categories, accounts] = await Promise.all([
-    db.from('family_members').select('id, display_name, color_index, left_at').eq('family_id', me.familyId).order('joined_at'),
+    db.from('family_members').select('id, display_name, color_index, left_at, avatar').eq('family_id', me.familyId).order('joined_at'),
     db.from('categories').select('id, name, kind').eq('family_id', me.familyId).or(keep(tx?.category_id)),
     authorId === me.id
       ? db.from('accounts').select('id, name').eq('owner_member_id', me.id).or(keep(tx?.account_id)).order('name')
@@ -119,7 +119,7 @@ export async function loadNewExpense(id?: string): Promise<NewExpenseData | null
     role: me.role,
     members: members
       .data!.filter((m) => !m.left_at || involved.has(m.id))
-      .map((m) => ({ id: m.id, name: m.display_name, colorIndex: m.color_index })),
+      .map((m) => ({ id: m.id, name: m.display_name, colorIndex: m.color_index, avatar: m.avatar as string | null })),
     categories: (categories.data as NewExpenseData['categories']).sort((a, b) => a.name.localeCompare(b.name, i18n.locale)),
     accounts: accounts.data!,
     editing: tx && {

@@ -4,9 +4,10 @@ import { supabase } from '../../core/supabase';
 export interface MoreView {
   name: string;
   colorIndex: number;
+  avatar?: string | null;
   role: MemberRole;
   familyName: string;
-  members: { id: string; name: string; colorIndex: number }[];
+  members: { id: string; name: string; colorIndex: number; avatar?: string | null }[];
   accounts: number;
   categories: number;
   monoConnected: boolean;
@@ -18,7 +19,7 @@ export async function loadMore(): Promise<MoreView> {
   const [members, accounts, categories, mono] = await Promise.all([
     db
       .from('family_members')
-      .select('id, display_name, color_index')
+      .select('id, display_name, color_index, avatar')
       .eq('family_id', me.familyId)
       .is('left_at', null)
       .order('joined_at'),
@@ -41,9 +42,10 @@ export async function loadMore(): Promise<MoreView> {
   return {
     name: self.display_name,
     colorIndex: self.color_index,
+    avatar: self.avatar as string | null,
     role: me.role,
     familyName: me.familyName,
-    members: members.data!.map((m) => ({ id: m.id, name: m.display_name, colorIndex: m.color_index })),
+    members: members.data!.map((m) => ({ id: m.id, name: m.display_name, colorIndex: m.color_index, avatar: m.avatar as string | null })),
     accounts: accounts.count ?? 0,
     categories: categories.count ?? 0,
     monoConnected: !!mono.count,
