@@ -44,13 +44,13 @@
         @if (o.spent.length) {
           <div class="bar" aria-hidden="true">
             @for (s of o.spent; track s.member.id) {
-              <div [class]="'bar-' + ($index % 3)" [style.flex]="s.amount"></div>
+              <div class="tone-{{ s.member.colorIndex }}" [style.flex]="s.amount"></div>
             }
           </div>
           <ul class="legend">
             @for (s of o.spent; track s.member.id) {
               <li>
-                <span class="dot" [class]="'bar-' + ($index % 3)"></span>
+                <span class="dot tone-{{ s.member.colorIndex }}"></span>
                 {{ nameOf(s.member) }} · {{ formatAmount(s.amount, { trimZero: true }) }}
               </li>
             }

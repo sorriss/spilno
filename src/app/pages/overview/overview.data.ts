@@ -11,7 +11,8 @@ export interface OverviewRows {
   meId: string;
   members: MemberRow[];
   balances: { member_id: string; balance: number }[];
-  monthShared: { paid_by_member_id: string; amount_base: number }[];
+  /** Доли участников в общих тратах месяца. */
+  monthShares: { member_id: string; amount: number }[];
   recent: RecentRow[];
 }
 
@@ -20,6 +21,7 @@ export interface Overview {
   /** Имена текущих участников для подзаголовка; себя показываем именем, а не «Ви». */
   memberNames: string[];
   sharedTotal: number;
+  /** Чья часть общих трат сколько: по долям, а не по тому, кто платил. */
   spent: { member: Member; amount: number }[];
   myBalance: number;
   /** С кем нужно рассчитаться: при положительном балансе это должники, при отрицательном — кому должен я. */
@@ -33,10 +35,11 @@ function memberOf(rows: OverviewRows, id: string): Member {
 
 export function buildOverview(rows: OverviewRows): Overview {
   const spentById = new Map<string, number>();
-  for (const t of rows.monthShared) {
-    spentById.set(t.paid_by_member_id, (spentById.get(t.paid_by_member_id) ?? 0) + Math.abs(t.amount_base));
+  for (const s of rows.monthShares) {
+    spentById.set(s.member_id, (spentById.get(s.member_id) ?? 0) + s.amount);
   }
   const spent = [...spentById]
+    .filter(([, amount]) => amount > 0)
     .map(([id, amount]) => ({ member: memberOf(rows, id), amount }))
     .sort((a, b) => b.amount - a.amount);
 
@@ -60,22 +63,34 @@ export function buildOverview(rows: OverviewRows): Overview {
   };
 }
 
+/** Полночь 1-го числа по Києву: так месяц считают аналитика (Europe/Kyiv в SQL) и все участники, где бы они ни были. */
+export function kyivMonthStart(year: number, month: number): Date {
+  const utc = Date.UTC(year, month, 1);
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Europe/Kyiv', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hourCycle: 'h23',
+    }).formatToParts(utc).map((x) => [x.type, Number(x.value)]),
+  );
+  const offset = Date.UTC(parts['year'], parts['month'] - 1, parts['day'], parts['hour'], parts['minute']) - utc;
+  return new Date(utc - offset);
+}
+
 async function fetchRows(month: Date): Promise<OverviewRows> {
   const db = supabase!;
   const me = await currentMember();
 
-  const nextMonth = new Date(month.getFullYear(), month.getMonth() + 1, 1);
-  const [members, balances, monthShared, recent] = await Promise.all([
+  const from = kyivMonthStart(month.getFullYear(), month.getMonth());
+  const to = kyivMonthStart(month.getFullYear(), month.getMonth() + 1);
+  const [members, balances, monthShares, recent] = await Promise.all([
     db.from('family_members').select('id, display_name, color_index, left_at').eq('family_id', me.familyId).order('joined_at'),
     db.from('member_balances').select('member_id, balance').eq('family_id', me.familyId),
     // ponytail: считаем на клиенте, упрётся в лимит PostgREST 1000 строк; при таком объёме заменить на view с суммами.
     db
-      .from('transactions')
-      .select('paid_by_member_id, amount_base:net_base')
+      .from('transaction_shares')
+      .select('member_id, amount, transactions!inner(occurred_at)')
       .eq('family_id', me.familyId)
-      .eq('is_shared', true)
-      .gte('occurred_at', month.toISOString())
-      .lt('occurred_at', nextMonth.toISOString()),
+      .gte('transactions.occurred_at', from.toISOString())
+      .lt('transactions.occurred_at', to.toISOString()),
     db
       .from('transactions')
       .select(
@@ -85,7 +100,7 @@ async function fetchRows(month: Date): Promise<OverviewRows> {
       .order('occurred_at', { ascending: false })
       .limit(3),
   ]);
-  const failed = members.error ?? balances.error ?? monthShared.error ?? recent.error;
+  const failed = members.error ?? balances.error ?? monthShares.error ?? recent.error;
   if (failed) throw failed;
 
   return {
@@ -93,7 +108,7 @@ async function fetchRows(month: Date): Promise<OverviewRows> {
     meId: me.id,
     members: members.data!,
     balances: balances.data!,
-    monthShared: monthShared.data!,
+    monthShares: monthShares.data!.map(({ member_id, amount }) => ({ member_id, amount })),
     recent: recent.data as unknown as RecentRow[],
   };
 }
@@ -111,10 +126,10 @@ const DEMO_ROWS: OverviewRows = {
     { member_id: 'o', balance: -84000 },
     { member_id: 's', balance: -44500 },
   ],
-  monthShared: [
-    { paid_by_member_id: 'a', amount_base: -912000 },
-    { paid_by_member_id: 'o', amount_base: -786000 },
-    { paid_by_member_id: 's', amount_base: -145000 },
+  monthShares: [
+    { member_id: 'a', amount: 712000 },
+    { member_id: 'o', amount: 686000 },
+    { member_id: 's', amount: 445000 },
   ],
   recent: [
     {

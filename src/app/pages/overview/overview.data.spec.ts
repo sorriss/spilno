@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { OverviewRows, buildOverview } from './overview.data';
+import { OverviewRows, buildOverview, kyivMonthStart } from './overview.data';
 
 const rows: OverviewRows = {
   familyName: 'Сім’я',
@@ -15,16 +15,17 @@ const rows: OverviewRows = {
     { member_id: 'o', balance: -84000 },
     { member_id: 's', balance: -44500 },
   ],
-  monthShared: [
-    { paid_by_member_id: 'a', amount_base: -100 },
-    { paid_by_member_id: 'x', amount_base: -300 },
-    { paid_by_member_id: 'a', amount_base: -50 },
+  monthShares: [
+    { member_id: 'a', amount: 100 },
+    { member_id: 'x', amount: 300 },
+    { member_id: 'a', amount: 50 },
+    { member_id: 's', amount: 0 },
   ],
   recent: [],
 };
 
 describe('buildOverview', () => {
-  it('суммирует траты по платившим, включая ушедших, от большей к меньшей', () => {
+  it('суммирует доли по участникам, включая ушедших, от большей к меньшей, без нулевых', () => {
     const o = buildOverview(rows);
     expect(o.sharedTotal).toBe(450);
     expect(o.spent.map((s) => [s.member.id, s.amount])).toEqual([['x', 300], ['a', 150]]);
@@ -41,5 +42,13 @@ describe('buildOverview', () => {
     const o = buildOverview({ ...rows, balances: [] });
     expect(o.myBalance).toBe(0);
     expect(o.counterparties).toEqual([]);
+  });
+});
+
+describe('kyivMonthStart', () => {
+  it('полночь по Києву: зимой UTC+2, летом UTC+3, декабрь переходит в январь', () => {
+    expect(kyivMonthStart(2026, 10).toISOString()).toBe('2026-10-31T22:00:00.000Z');
+    expect(kyivMonthStart(2026, 6).toISOString()).toBe('2026-06-30T21:00:00.000Z');
+    expect(kyivMonthStart(2026, 12).toISOString()).toBe('2026-12-31T22:00:00.000Z');
   });
 });

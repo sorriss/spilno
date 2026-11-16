@@ -117,16 +117,10 @@ a {
   overflow: hidden;
 }
 
-.bar-0 {
-  background: var(--sp-bar-0);
-}
-
-.bar-1 {
-  background: var(--sp-bar-1);
-}
-
-.bar-2 {
-  background: var(--sp-bar-2);
+// Цвет участника, как у его аватара.
+.bar > div,
+.dot {
+  background: var(--tone-fg);
 }
 
 .legend {
