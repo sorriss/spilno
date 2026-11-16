@@ -51,6 +51,38 @@
                 <p class="sub">{{ s.payerHint }} {{ s.noPayLink(p.to.name) }}</p>
               }
             }
+            @if (p.items.length) {
+              @let key = p.from.id + p.to.id;
+              <button type="button" class="toggle" [attr.aria-expanded]="open().has(key)" (click)="toggle(key)">
+                {{ open().has(key) ? s.hideItems : s.byItems(p.items.length) }}
+              </button>
+              @if (open().has(key)) {
+                <p class="sub">{{ s.itemsHint }}</p>
+                <ul class="items">
+                  @for (item of p.items; track item.txId) {
+                    <li>
+                      <span class="icon" [class]="item.colorIndex === null ? 'tone-neutral' : 'tone-' + item.colorIndex">
+                        <ion-icon [name]="item.icon" aria-hidden="true" />
+                      </span>
+                      <span class="text">
+                        <span class="name">{{ item.title }}</span>
+                        <span class="sub">{{ date(item.date) }}{{ item.pending ? ' · ' + s.itemPending : '' }}</span>
+                      </span>
+                      <span class="item-sum">{{ money(item.amount) }}</span>
+                      @if (p.to.isMe) {
+                        <button type="button" class="soft" [disabled]="busy()" (click)="settle(v.familyId, p, item.amount, 'paid', item.txId)">
+                          {{ s.received }}
+                        </button>
+                      } @else if (p.from.isMe && item.payUrl) {
+                        <a class="soft" target="_blank" rel="noopener" [href]="item.payUrl" (click)="pay(v.familyId, p, item.amount, item.txId)">
+                          {{ s.payItem }}
+                        </a>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+            }
           </section>
         }
       } @else {

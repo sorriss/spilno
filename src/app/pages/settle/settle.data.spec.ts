@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSettle, normalizePayLink, pairLabel, parseReceived, payUrl, SettleRows } from './settle.data';
+import { buildSettle, normalizePayLink, OpenShareRow, openItems, pairLabel, parseReceived, payUrl, SettleRows } from './settle.data';
 
 const rows: SettleRows = {
   familyId: 'f',
@@ -92,10 +92,49 @@ describe('ссылка mono', () => {
       ],
       settlements: [],
       payLinks: { o: 'https://send.monobank.ua/O' },
-      pending: [{ to_member_id: 'o', amount: 500 }],
+      pending: [{ to_member_id: 'o', amount: 500, for_transaction_id: null }],
     };
     const payments = buildSettle(rows).payments.map((p) => [p.from.id, p.to.id, p.payUrl, p.pending]);
     expect(payments).toContainEqual(['a', 'o', 'https://send.monobank.ua/O?a=5.00', true]);
     expect(payments).toContainEqual(['y', 'o', null, false]);
+  });
+});
+
+describe('openItems', () => {
+  const share = (id: string, from: string, amount: number): OpenShareRow => ({
+    transaction_id: id, from_member_id: from, to_member_id: 'a', amount, occurred_at: '2026-11-01T12:00:00Z',
+    comment: null, category_name: 'Продукти', category_icon: null, category_color: null,
+  });
+  const shares = [share('new', 'o', 300), share('other', 'y', 999), share('mid', 'o', 500), share('old', 'o', 400)];
+
+  it('берёт новые доли пары, пока не наберётся долг; последнюю обрезает', () => {
+    expect(openItems(shares, 'o', 'a', 700).map((i) => [i.transaction_id, i.amount])).toEqual([['new', 300], ['mid', 400]]);
+  });
+
+  it('сумма долей не больше долга, даже если долей не хватает', () => {
+    const items = openItems(shares, 'o', 'a', 5000);
+    expect(items.reduce((sum, i) => sum + i.amount, 0)).toBe(1200);
+    expect(openItems(shares, 'o', 'a', 0)).toEqual([]);
+  });
+
+  it('доли попадают в карточку долга, ссылка mono — на сумму доли', () => {
+    const view = buildSettle({
+      familyId: 'f',
+      meId: 'o',
+      members: [
+        { id: 'a', display_name: 'Андрій', color_index: 0, left_at: null },
+        { id: 'o', display_name: 'Олена', color_index: 1, left_at: null },
+      ],
+      balances: [{ member_id: 'a', balance: 700 }, { member_id: 'o', balance: -700 }],
+      settlements: [],
+      payLinks: { a: 'https://send.monobank.ua/A' },
+      pending: [{ to_member_id: 'a', amount: 400, for_transaction_id: 'mid' }],
+      shares,
+    });
+    expect(view.payments[0].items.map((i) => [i.txId, i.payUrl, i.pending])).toEqual([
+      ['new', 'https://send.monobank.ua/A?a=3.00', false],
+      ['mid', 'https://send.monobank.ua/A?a=4.00', true],
+    ]);
+    expect(view.payments[0].pending).toBe(false);
   });
 });

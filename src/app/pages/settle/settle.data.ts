@@ -16,6 +16,8 @@ export interface Settlement {
   createdAt: Date;
   /** Отменить, как и подтвердить, может только получатель. */
   canUndo: boolean;
+  /** Название траты, если расчёт закрывал одну трату. */
+  forTitle: string | null;
 }
 
 interface SettlementRow {
@@ -25,6 +27,31 @@ interface SettlementRow {
   amount: number;
   kind: SettlementKind;
   created_at: string;
+  for_tx?: { comment: string | null; categories: { name: string } | null } | null;
+}
+
+/** Строка open_shares: сколько должник ещё должен за трату получателю. */
+export interface OpenShareRow {
+  transaction_id: string;
+  from_member_id: string;
+  to_member_id: string;
+  amount: number;
+  occurred_at: string;
+  comment: string | null;
+  category_name: string | null;
+  category_icon: string | null;
+  category_color: number | null;
+}
+
+export interface SettleItem {
+  txId: string;
+  title: string;
+  date: Date;
+  icon: string;
+  colorIndex: number | null;
+  amount: number;
+  payUrl: string | null;
+  pending: boolean;
 }
 
 export interface SettleRows {
@@ -36,7 +63,9 @@ export interface SettleRows {
   /** Ссылки mono участников для переказу: id участника → ссылка без суммы. */
   payLinks?: Record<string, string>;
   /** Мои ещё не подтверждённые «Переказати в mono» за последние сутки. */
-  pending?: { to_member_id: string; amount: number }[];
+  pending?: { to_member_id: string; amount: number; for_transaction_id: string | null }[];
+  /** Открытые доли, новые сначала. */
+  shares?: OpenShareRow[];
 }
 
 export interface SettleView {
@@ -50,6 +79,8 @@ export interface SettleView {
     payUrl: string | null;
     /** Я уже нажал «Переказати в mono», ждём перевод в выписке. */
     pending: boolean;
+    /** Те же деньги по тратам: закрыть можно любую отдельно. */
+    items: SettleItem[];
   }[];
   recent: Settlement[];
   hasMore: boolean;
@@ -68,7 +99,28 @@ export function normalizePayLink(input: string): string | null {
 export function payUrl(link: string, kopecks: number): string {
   return `${link}?a=${Math.trunc(kopecks / 100)}.${String(kopecks % 100).padStart(2, '0')}`;
 }
-const FIELDS = 'id, from_member_id, to_member_id, amount, kind, created_at';
+const FIELDS = 'id, from_member_id, to_member_id, amount, kind, created_at, for_tx:transactions!for_transaction_id(comment, categories(name))';
+
+const shareTitle = (comment: string | null, category: string | null | undefined) =>
+  comment ?? category ?? i18n.transaction.expense;
+
+/**
+ * Долг пары по тратам. Привязанные расчёты уже вычтены в open_shares, а расчёты без привязки и встречные долги —
+ * нет, поэтому берём новые доли, пока не наберётся текущий долг: старые считаем закрытыми первыми.
+ * Долг, который план гасит через третьего участника, может не набраться: тогда его закрывают только целиком.
+ */
+export function openItems(shares: readonly OpenShareRow[], from: string, to: string, debt: number): OpenShareRow[] {
+  const items: OpenShareRow[] = [];
+  let left = debt;
+  for (const share of shares) {
+    if (left <= 0) break;
+    if (share.from_member_id !== from || share.to_member_id !== to) continue;
+    const amount = Math.min(share.amount, left);
+    items.push({ ...share, amount });
+    left -= amount;
+  }
+  return items;
+}
 
 function toSettlement(row: SettlementRow, members: readonly MemberRow[], meId: string): Settlement {
   return {
@@ -79,6 +131,7 @@ function toSettlement(row: SettlementRow, members: readonly MemberRow[], meId: s
     kind: row.kind,
     createdAt: new Date(row.created_at),
     canUndo: row.to_member_id === meId,
+    forTitle: row.for_tx ? shareTitle(row.for_tx.comment, row.for_tx.categories?.name) : null,
   };
 }
 
@@ -93,12 +146,24 @@ export function buildSettle(rows: SettleRows): SettleView {
       .map((m) => ({ member: member(m.id), balance: balanceOf(m.id) })),
     payments: settlementPlan(rows.balances.map((b) => ({ memberId: b.member_id, balance: b.balance }))).map((p) => {
       const link = p.from === rows.meId ? rows.payLinks?.[p.to] : undefined;
+      const waiting = (amount: number, txId: string | null) =>
+        !!rows.pending?.some((i) => p.from === rows.meId && i.to_member_id === p.to && i.amount === amount && i.for_transaction_id === txId);
       return {
         from: member(p.from),
         to: member(p.to),
         amount: p.amount,
         payUrl: link ? payUrl(link, p.amount) : null,
-        pending: !!rows.pending?.some((i) => p.from === rows.meId && i.to_member_id === p.to && i.amount === p.amount),
+        pending: waiting(p.amount, null),
+        items: openItems(rows.shares ?? [], p.from, p.to, p.amount).map((sh) => ({
+          txId: sh.transaction_id,
+          title: shareTitle(sh.comment, sh.category_name),
+          date: new Date(sh.occurred_at),
+          icon: sh.category_icon ?? 'pricetag-outline',
+          colorIndex: sh.category_color,
+          amount: sh.amount,
+          payUrl: link ? payUrl(link, sh.amount) : null,
+          pending: waiting(sh.amount, sh.transaction_id),
+        })),
       };
     }),
     recent: rows.settlements.slice(0, RECENT).map((s) => toSettlement(s, rows.members, rows.meId)),
@@ -109,7 +174,7 @@ export function buildSettle(rows: SettleRows): SettleView {
 export async function loadSettle(): Promise<SettleView> {
   const db = supabase!;
   const me = await currentMember();
-  const [members, balances, settlements, links, pending] = await Promise.all([
+  const [members, balances, settlements, links, pending, shares] = await Promise.all([
     allMembers(me.familyId),
     db.from('member_balances').select('member_id, balance').eq('family_id', me.familyId),
     db
@@ -122,21 +187,24 @@ export async function loadSettle(): Promise<SettleView> {
     // Сутки: дальше импорт намерение уже не подтвердит.
     db
       .from('payment_intents')
-      .select('to_member_id, amount')
+      .select('to_member_id, amount, for_transaction_id')
       .eq('from_member_id', me.id)
       .is('settlement_id', null)
       .gte('created_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString()),
+    // ponytail: последние 300 открытых долей; долг старше этого закрывают целиком.
+    db.from('open_shares').select('*').eq('family_id', me.familyId).order('occurred_at', { ascending: false }).limit(300),
   ]);
-  const failed = balances.error ?? settlements.error ?? links.error ?? pending.error;
+  const failed = balances.error ?? settlements.error ?? links.error ?? pending.error ?? shares.error;
   if (failed) throw failed;
   return buildSettle({
     familyId: me.familyId,
     meId: me.id,
     members,
     balances: balances.data!,
-    settlements: settlements.data as SettlementRow[],
+    settlements: settlements.data as unknown as SettlementRow[],
     payLinks: Object.fromEntries(links.data!.map((m) => [m.id, m.mono_pay_link as string])),
     pending: pending.data!,
+    shares: shares.data as OpenShareRow[],
   });
 }
 
@@ -153,7 +221,7 @@ export async function loadHistory(): Promise<Settlement[]> {
       .limit(200),
   ]);
   if (settlements.error) throw settlements.error;
-  return (settlements.data as SettlementRow[]).map((s) => toSettlement(s, members, me.id));
+  return (settlements.data as unknown as SettlementRow[]).map((s) => toSettlement(s, members, me.id));
 }
 
 export async function addSettlement(
@@ -162,16 +230,17 @@ export async function addSettlement(
   toId: string,
   amount: number,
   kind: SettlementKind,
+  txId: string | null = null,
 ): Promise<void> {
   const { error } = await supabase!
     .from('settlements')
-    .insert({ family_id: familyId, from_member_id: fromId, to_member_id: toId, amount, kind });
+    .insert({ family_id: familyId, from_member_id: fromId, to_member_id: toId, amount, kind, for_transaction_id: txId });
   if (error) throw error;
 }
 
 /** Запоминает «плачу через mono»: импорт выписки найдёт перевод и закроет долг сам. */
-export async function startPayment(familyId: string, toId: string, amount: number): Promise<void> {
-  const { error } = await supabase!.rpc('start_payment', { fam: familyId, to_member: toId, pay_amount: amount });
+export async function startPayment(familyId: string, toId: string, amount: number, txId: string | null = null): Promise<void> {
+  const { error } = await supabase!.rpc('start_payment', { fam: familyId, to_member: toId, pay_amount: amount, for_tx: txId });
   if (error) throw error;
 }
 

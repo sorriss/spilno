@@ -29,7 +29,7 @@ export async function askUndo(alerts: AlertController, s: Settlement, onConfirm:
     </span>
     <span class="text">
       <span class="title">{{ label() }}</span>
-      <span class="sub">{{ date() }} · {{ t.kinds[settlement().kind] }}</span>
+      <span class="sub">{{ date() }} · {{ t.kinds[settlement().kind] }}{{ settlement().forTitle ? " · " + settlement().forTitle : "" }}</span>
     </span>
     <span class="amount">{{ money() }}</span>
     @if (settlement().canUndo) {

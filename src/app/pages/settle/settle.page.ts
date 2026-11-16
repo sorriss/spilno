@@ -6,7 +6,7 @@ import { arrowForward } from 'ionicons/icons';
 import { formatAmount, formatMoney } from '../../core/money';
 import { notify } from '../../core/push';
 import { i18n } from '../../i18n';
-import { nameOf } from '../../shell/tx-row';
+import { CATEGORY_ICONS, nameOf } from '../../shell/tx-row';
 import {
   addSettlement, loadSettle, pairLabel, parseReceived, Settlement, SettlementKind, SettleView, startPayment, undoSettlement,
 } from './settle.data';
@@ -31,9 +31,11 @@ export class SettlePage {
   protected readonly view = resource({ loader: loadSettle });
   protected readonly busy = signal(false);
   protected readonly error = signal('');
+  /** Пары, у которых раскрыт список трат. */
+  protected readonly open = signal(new Set<string>());
 
   constructor() {
-    addIcons({ arrowForward });
+    addIcons({ arrowForward, ...CATEGORY_ICONS });
   }
 
   /** Страница живёт в стеке Ionic: операции и расчёты могли появиться, пока вы были в другом месте. */
@@ -43,6 +45,16 @@ export class SettlePage {
 
   protected money(kopecks: number, plus = false): string {
     return formatMoney(kopecks, { plus });
+  }
+
+  protected date(d: Date): string {
+    return d.toLocaleDateString(i18n.locale, { day: 'numeric', month: 'long' });
+  }
+
+  protected toggle(key: string): void {
+    const next = new Set(this.open());
+    if (!next.delete(key)) next.add(key);
+    this.open.set(next);
   }
 
   protected balanceHint(isMe: boolean, balance: number): string {
@@ -105,8 +117,8 @@ export class SettlePage {
    * Ссылка открывается сама (настоящий <a>: так iOS скорее откроет приложение mono). Параллельно запоминаем намерение;
    * если не записалось, перевод всё равно пройдёт, а долг закроет получатель кнопкой «Отримав».
    */
-  protected pay(familyId: string, p: Payment): void {
-    startPayment(familyId, p.to.id, p.amount)
+  protected pay(familyId: string, p: Payment, amount = p.amount, txId: string | null = null): void {
+    startPayment(familyId, p.to.id, amount, txId)
       .then(() => this.view.reload())
       .catch(() => this.error.set(this.s.payError));
   }
@@ -127,8 +139,8 @@ export class SettlePage {
     return askUndo(this.alerts, settlement, () => void this.run(() => undoSettlement(settlement.id)));
   }
 
-  private settle(familyId: string, p: Payment, amount: number, kind: SettlementKind): Promise<void> {
-    return this.run(() => addSettlement(familyId, p.from.id, p.to.id, amount, kind));
+  protected settle(familyId: string, p: Payment, amount: number, kind: SettlementKind, txId: string | null = null): Promise<void> {
+    return this.run(() => addSettlement(familyId, p.from.id, p.to.id, amount, kind, txId));
   }
 
   private async run(action: () => Promise<void>): Promise<void> {

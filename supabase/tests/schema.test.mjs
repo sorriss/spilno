@@ -617,6 +617,36 @@ test('оплата через mono: намерение + выписка закр
     delete from accounts where id in ('${accA}', '${accO}'); update family_members set mono_pay_link = null`);
 });
 
+test('долг закрывают по трате: open_shares, проверка привязки, намерение с тратой', async () => {
+  // Олена должна Андрію 500 ₴ за эту трату.
+  const [{ id: tx }] = await as(ANDRII, `select add_transaction($1, 'expense', -100000, now(), 'Продукти', null, $2, null, 'equal', $3) as id`,
+    [fam, andrii, JSON.stringify([{ member_id: andrii, amount: 50000, weight: null }, { member_id: olena, amount: 50000, weight: null }])]);
+  const open = async () => (await as(OLENA, 'select from_member_id, to_member_id, amount from open_shares where transaction_id = $1', [tx]))
+    .map((r) => [r.from_member_id, r.to_member_id, Number(r.amount)]);
+  assert.deepEqual(await open(), [[olena, andrii, 50000]]); // своя доля плательщика долгом не считается
+
+  // Ссылка только на долю должника перед получателем.
+  await assert.rejects(as(OLENA, `insert into settlements (family_id, from_member_id, to_member_id, amount, for_transaction_id)
+    values ($1, $2, $3, 100, $4)`, [fam, andrii, olena, tx]), /row-level security/);
+  await assert.rejects(as(ANDRII, `insert into settlements (family_id, from_member_id, to_member_id, amount, for_transaction_id)
+    values ($1, $2, $3, 100, $4)`, [fam, sofia, andrii, tx]), /row-level security/);
+  const [{ id: part }] = await as(ANDRII, `insert into settlements (family_id, from_member_id, to_member_id, amount, for_transaction_id)
+    values ($1, $2, $3, 20000, $4) returning id`, [fam, olena, andrii, tx]);
+  assert.deepEqual(await open(), [[olena, andrii, 30000]]);
+
+  // Намерение с тратой: чужая доля не проходит, своя закрывается выпиской с тратой в расчёте.
+  await assert.rejects(as(SOFIA, 'select start_payment($1, $2, 100, $3)', [fam, andrii, tx]), /not your share|nothing to pay/);
+  await as(OLENA, 'select start_payment($1, $2, 30000, $3)', [fam, andrii, tx]);
+  const { rows: [{ id: bank }] } = await db.query(`insert into transactions (family_id, type, amount, amount_base, created_by_member_id,
+    paid_by_member_id, source, external_id) values ($1, 'income', 30000, 30000, $2, $2, 'mono', 'by-tx') returning id`, [fam, andrii]);
+  const [closed] = (await db.query('select * from private.match_payment_intents($1)', [[bank]])).rows;
+  assert.equal((await as(ANDRII, 'select for_transaction_id from settlements where id = $1', [closed.settlement_id]))[0].for_transaction_id, tx);
+  assert.deepEqual(await open(), []);
+
+  await db.exec(`delete from payment_intents; delete from settlements where id in ('${part}', '${closed.settlement_id}');
+    delete from transactions where id in ('${tx}', '${bank}')`);
+});
+
 test('rename_me меняет только своё имя и не даёт повысить роль', async () => {
   await as(OLENA, `select rename_me($1, ' Оленка ')`, [fam]);
   const rows = await as(ANDRII, 'select id, display_name, role from family_members where family_id = $1', [fam]);
